@@ -1,0 +1,2 @@
+# THIS IS DEPRECATED
+Due to early design decisions the complexity became unmanagable, commenting in and out code sections to enable different features. Its purely here to display the paper results if desired, but I improved the compiler flags, which mostly improved performance.  
