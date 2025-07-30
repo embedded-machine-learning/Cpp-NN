@@ -1,0 +1,3 @@
+clang++-18 -march=native -O0 -Wpedantic -Wc++20-compat -shared -std=c++20 -fconstexpr-steps=100000000 -fPIC $(python3 -m pybind11 --includes) -I ./ test_python_interface.cpp -o  TestPython.so
+
+clang++-18 -Wall -std=c++20 -O1 -ftemplate-depth=10000 -fconstexpr-steps=100000000 -march=native -Wall -Wpedantic -Wextra ./test_DSSM.cpp

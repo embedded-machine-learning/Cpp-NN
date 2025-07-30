@@ -6,6 +6,8 @@
 *.asm
 *.mid
 *.wav
+*.inc
+*.optimized
 .vscode
 
 
