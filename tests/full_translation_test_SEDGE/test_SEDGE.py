@@ -10,6 +10,7 @@ import time
 
 
 include_path = '../../'
+model_path = '../../'
 
 sys.path.append(os.path.join(os.path.dirname(__file__),include_path, "include"))
 from write_weights import write_weight
@@ -42,63 +43,54 @@ SUB_BATCH = 1
 # C_KP = 10
 # SUB_BATCH = 1
 
-
-# weights_dict = np.load('./model_dict_16kHz_small.npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_dict_16kHz.npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/303/model_dict_[1, 1, 1, 1, 1, 1].npy', allow_pickle=True).item()
-# weights_dict = np.load('./step_scale_models_run303/model_dict_[1, 1, 1, 1, 9, 63].npy', allow_pickle=True).item()
-# weights_dict = np.load('./step_scale_models_run303/model_dict_[1, 1, 2, 6, 18, 54].npy', allow_pickle=True).item()
-# weights_dict = np.load('./step_scale_models_run303/model_dict_[1, 2, 2, 6, 18, 54].npy', allow_pickle=True).item()
-# weights_dict = np.load('./step_scale_models_run303/model_dict_[1, 4, 4, 12, 24, 48].npy', allow_pickle=True).item()
-
 # 141k parmas
-# weights_dict = np.load('./model_exports/145/model_dict_[1, 1, 1, 1, 1, 1].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/145/model_dict_[1, 1, 1, 2, 4, 12].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/145/model_dict_[1, 1, 4, 8, 16, 32].npy', allow_pickle=True).item()
-weights_dict = np.load('./model_exports/145/model_dict_[1, 2, 14, 14, 42, 42].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/145/model_dict_[1, 1, 1, 1, 1, 1].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/145/model_dict_[1, 1, 1, 2, 4, 12].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/145/model_dict_[1, 1, 4, 8, 16, 32].npy', allow_pickle=True).item()
+weights_dict = np.load(f'{model_path}/model_exports/145/model_dict_[1, 2, 14, 14, 42, 42].npy', allow_pickle=True).item()
 
 # 56k parmas
-# weights_dict = np.load('./model_exports/299/model_dict_[1, 1, 1, 1, 1, 1].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/299/model_dict_[1, 1, 1, 2, 2, 38].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/299/model_dict_[1, 2, 2, 8, 8, 48].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/299/model_dict_[1, 3, 3, 6, 30, 60].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/299/model_dict_[1, 1, 1, 1, 1, 1].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/299/model_dict_[1, 1, 1, 2, 2, 38].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/299/model_dict_[1, 2, 2, 8, 8, 48].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/299/model_dict_[1, 3, 3, 6, 30, 60].npy', allow_pickle=True).item()
 
 # 20k parmas no reg
-# weights_dict = np.load('./model_exports/302/model_dict_[1, 1, 1, 1, 1, 1].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/302/model_dict_[1, 1, 1, 1, 2, 22].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/302/model_dict_[1, 1, 3, 6, 6, 42].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/302/model_dict_[1, 1, 1, 1, 1, 1].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/302/model_dict_[1, 1, 1, 1, 2, 22].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/302/model_dict_[1, 1, 3, 6, 6, 42].npy', allow_pickle=True).item()
 
 
 # 20k parmas reg
-# weights_dict = np.load('./model_exports/303/model_dict_[1, 1, 1, 1, 1, 1].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/303/model_dict_[1, 1, 1, 1, 9, 63].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/303/model_dict_[1, 2, 2, 6, 18, 54].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/303/model_dict_[1, 2, 4, 16, 32, 64].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/303/model_dict_[1, 4, 4, 16, 32, 64].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/303/model_dict_[1, 4, 4, 16, 64, 64].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/303/model_dict_[1, 1, 1, 1, 1, 1].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/303/model_dict_[1, 1, 1, 1, 9, 63].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/303/model_dict_[1, 2, 2, 6, 18, 54].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/303/model_dict_[1, 2, 4, 16, 32, 64].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/303/model_dict_[1, 4, 4, 16, 32, 64].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/303/model_dict_[1, 4, 4, 16, 64, 64].npy', allow_pickle=True).item()
 
 # 20k parmas reg and pruned
-# weights_dict = np.load('./model_exports/303_pruned/model_dict_[1, 1, 1, 1, 1, 1].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/303_pruned/model_dict_[1, 4, 4, 12, 24, 48].npy', allow_pickle=True).item()
-# weights_dict = np.load( './model_exports/303_pruned/model_dict_[1, 2, 4, 16, 32, 64].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/303_pruned/model_dict_[1, 4, 4, 16, 32, 64].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/303_pruned/model_dict_[1, 2, 2, 6, 18, 54].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/303_pruned/model_dict_[1, 1, 1, 1, 1, 1].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/303_pruned/model_dict_[1, 4, 4, 12, 24, 48].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/303_pruned/model_dict_[1, 2, 4, 16, 32, 64].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/303_pruned/model_dict_[1, 4, 4, 16, 32, 64].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/303_pruned/model_dict_[1, 2, 2, 6, 18, 54].npy', allow_pickle=True).item()
 
 
 # 8k parmas no reg 304
-# weights_dict = np.load('./model_exports/304/model_dict_[1, 1, 1].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/304/model_dict_[1, 1, 5].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/304/model_dict_[1, 2, 22].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/304/model_dict_[1, 4, 28].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/304/model_dict_[1, 1, 1].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/304/model_dict_[1, 1, 5].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/304/model_dict_[1, 2, 22].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/304/model_dict_[1, 4, 28].npy', allow_pickle=True).item()
 
 # 8k parmas reg 305
-# weights_dict = np.load('./model_exports/305/model_dict_[1, 1, 1].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/305/model_dict_[1, 2, 6].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/305/model_dict_[1, 5, 20].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/305/model_dict_[1, 9, 54].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/305/model_dict_[1, 11, 55].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/305/model_dict_[2, 8, 64].npy', allow_pickle=True).item()
-# weights_dict = np.load('./model_exports/305/model_dict_[3, 12, 48].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/305/model_dict_[1, 1, 1].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/305/model_dict_[1, 2, 6].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/305/model_dict_[1, 5, 20].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/305/model_dict_[1, 9, 54].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/305/model_dict_[1, 11, 55].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/305/model_dict_[2, 8, 64].npy', allow_pickle=True).item()
+# weights_dict = np.load(f'{model_path}/model_exports/305/model_dict_[3, 12, 48].npy', allow_pickle=True).item()
 
 type_of_weights = 'float'
 
@@ -202,14 +194,12 @@ with open("network.hpp", "w") as file:
     string = ""
     for index,_ in enumerate(weights_dict):
         if f'A' in weights_dict[index].keys() and f'SkipLayer' in weights_dict[index].keys() and weights_dict[index]['SkipLayer'] is not None:
-            # layers::S5_class_hidden(A, B, C, BiasRNN, BiasOut, Passthrough),
-            # string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, SkipLayer{index}, LeakyReLU<float>),\n'
             string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, SkipLayer{index}_1_{S_KP}, LeakyReLU<float>),\n'
+            # string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, SkipLayer{index}, LeakyReLU<float>),\n'
 
         elif f'A' in weights_dict[index].keys():
-            # layers::S5_class_hidden(A, B, C, BiasRNN, BiasOut, Passthrough),
-            # string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, Matrix<float, "E", 1>{{1}}, LeakyReLU<float>),\n'
             string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, Matrix<float, "E", 1>{{1}}, LeakyReLU<float>),\n'
+            # string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, Matrix<float, "E", 1>{{1}}, LeakyReLU<float>),\n'
     
     
     string += f'    layers::SumReduction<"S">(),\n'
@@ -231,15 +221,15 @@ print(f"Total number of weights: {total_number_of_weights}")
 # %% Compile
 
 
-subprocess.run(f"{compiler} -Wall -std=c++20 -O3 -march=native -ftemplate-depth=10000 -fconstexpr-steps=100000000 -Wall -I {include_path} unroll_weights.cpp -o {current_pos}/weight_unrolling_exec.out", shell=True,executable="/bin/bash", stderr=subprocess.STDOUT)
+subprocess.run(f"{compiler} -Wall -std=c++20 -O0 -ftemplate-depth=10000 -fconstexpr-steps=100000000 -Wall -I {include_path} unroll_weights.cpp -o {current_pos}/weight_unrolling_exec.out", shell=True,executable="/bin/bash", stderr=subprocess.STDOUT)
 subprocess.run(f"./weight_unrolling_exec.out", shell=True,executable="/bin/bash", stderr=subprocess.STDOUT)
 
 
 #%%
 if os.path.exists("CppSEdge.so"):
     os.remove("CppSEdge.so")
-subprocess.run(f"{compiler} -march=native -O3 -fstack-usage -Wall -Wpedantic -Winline -shared -std=c++20 -fconstexpr-steps=100000000 -fPIC $(python3 -m pybind11 --includes) -I {include_path} {current_pos}/test_SEdge.cpp -o  {current_pos}/CppSEdge.so", shell=True, executable="/bin/bash", stderr=subprocess.STDOUT)
-# subprocess.run(f"g++-12 -march=native -Wall -Wpedantic -fstack-usage -Wno-inline -O3 -fdump-tree-optimized -shared -std=c++20 --param max-unrolled-insns=1000000000 --param max-inline-insns-single=1000000000 -finline-limit=1000000000 --param inline-unit-growth=1000000 -fPIC $(python3 -m pybind11 --includes) -I {include_path} {current_pos}/test_SEdge.cpp -o  {current_pos}/CppSEdge.so", shell=True, executable="/bin/bash", stderr=subprocess.STDOUT)
+subprocess.run(f"{compiler} -march=native -Os -fstack-usage -Wall -Wpedantic -Winline -shared -std=c++20 -fconstexpr-steps=100000000 -fPIC $(python3 -m pybind11 --includes) -I {include_path} {current_pos}/test_SEdge.cpp -o  {current_pos}/CppSEdge.so", shell=True, executable="/bin/bash", stderr=subprocess.STDOUT)
+# subprocess.run(f"g++-12 -march=native -Wall -Wpedantic -fstack-usage -Wno-inline -Os -fdump-tree-optimized -shared -std=c++20 -fPIC $(python3 -m pybind11 --includes) -I {include_path} {current_pos}/test_SEdge.cpp -o  {current_pos}/CppSEdge.so", shell=True, executable="/bin/bash", stderr=subprocess.STDOUT)
 
 
 # %%

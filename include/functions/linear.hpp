@@ -35,7 +35,9 @@ template <std::size_t SuggestedSubBatchSize                         = 1, // unun
           typename Lambda                                           = decltype([]() {}),
           IsMatrixType... ActivationInformationMatrixType>
     requires(IsMACOperation<MACOperator, typename InputMatrixType::value_type, typename WeightMatrixType::value_type, typename BiasMatrixType::value_type>)
-__attribute__((always_inline)) inline void Linear( // Function Parameters
+// __attribute__((always_inline)) inline    // Let the compiler decide the inlining 
+inline
+void Linear( // Function Parameters
         const InputMatrixType  &Input,
         OutputMatrixType       &Output,
         const WeightMatrixType &Weights,
@@ -274,9 +276,10 @@ template <std::size_t SuggestedSubBatchSize                         = 1,
           typename Lambda                                           = decltype([]() {}),
           IsMatrixType... ActivationInformationMatrixType>
     requires(std::tuple_size_v<std::remove_cvref_t<WeightMatrixType>> == 4)
-__attribute__((always_inline)) inline
+// __attribute__((always_inline)) inline // Let the compiler decide the inlining
         // __attribute__((noinline))
         //
+        inline
         void
         Linear( // Function Parameters
                 const InputMatrixType  &Input,
