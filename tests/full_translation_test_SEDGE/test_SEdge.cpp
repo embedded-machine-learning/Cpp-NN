@@ -1,6 +1,8 @@
 #include <chrono>
 #include <iostream>
 
+#define __LINEAR_FORCE_INLINE__ false 
+
 #include "include/NeuralNetwork.hpp"
 #include "include/helpers/human_readable_types.hpp"
 #include "include/helpers/print.hpp"

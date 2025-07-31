@@ -10,7 +10,9 @@ import os
 import subprocess
 import matplotlib.pyplot as plt
 
-sys.path.append(os.path.dirname(__file__) + "/../../")
+include_path = '../../'
+
+sys.path.append(os.path.join(os.path.dirname(__file__),include_path, "include"))
 
 from write_weights import write_weight
 
@@ -18,16 +20,18 @@ from write_weights import write_weight
 
 compiler = "clang++-18"
 
-# S_KP = 14*8
-# B_KP = 12*4
-# C_KP = 12*8
-# SUB_BATCH=1
+S_KP = 14*8
+B_KP = 12*4
+C_KP = 12*8
+W_KP = 14*8
+SUB_BATCH=1
 
 
-S_KP = 24
-B_KP = 12
-C_KP = 12*2
-SUB_BATCH=4
+# S_KP = 24
+# B_KP = 12
+# C_KP = 12*2
+# W_KP = 14
+# SUB_BATCH=4
 
 # S_KP = 1
 
@@ -35,9 +39,9 @@ SUB_BATCH=4
 # sampling_rate = 24000
 sampling_rate = 44100
 
-model = f"MidiSSM_S_MH_maestro_all_{sampling_rate}_model"
+# model = f"MidiSSM_S_MH_maestro_all_{sampling_rate}_model"
 # model = f"MidiSSM_L_MH_maestro_all_{sampling_rate}_model"
-# model = f"MidiSSM_XL_MH_maestro_all_{sampling_rate}_model"
+model = f"MidiSSM_XL_MH_maestro_all_{sampling_rate}_model"
 
 current_pos = '/'.join(__file__.split("/")[:-1])
 
@@ -110,13 +114,14 @@ class SequenceLayer(torch.nn.Module):
         self.B_bias_bar = B_bars[:, -1]
 
 
-with open(f'{current_pos}/weights.hpp', "w") as file:
+with open(f'{current_pos}/weights.inc', "w") as file:
     file.write('#pragma once\n')
-    file.write('#include "./Matrix.hpp"\n')
-    file.write('#include "./types/Complex.hpp"\n')
+    file.write('#include "./include/Matrix.hpp"\n')
+    file.write('#include "./include/types/Complex.hpp"\n')
     file.write('constexpr std::size_t B_KP = ' + str(B_KP) + ';\n')
     file.write('constexpr std::size_t C_KP = ' + str(C_KP) + ';\n')
     file.write('constexpr std::size_t S_KP = ' + str(S_KP) + ';\n')
+    file.write('constexpr std::size_t W_KP = ' + str(W_KP) + ';\n')
     file.write('\n')
 
 
@@ -140,15 +145,15 @@ with open(f'{current_pos}/weights.hpp', "w") as file:
 
         layer.convert_to_discrete()
         if layer.Lambda_bars is not None:
-            tmp_A = layer.Lambda_bars.detach().cpu().numpy()
+            tmp_A = layer.Lambda_bars.detach().cpu().numpy().astype(np.complex64)
             write_weight(tmp_A, f"A{index}", 'C', file)
         if layer.B_bar is not None:
-            tmp_B = layer.B_bar.detach().cpu().numpy()
+            tmp_B = layer.B_bar.detach().cpu().numpy().astype(np.complex64)
             tmp_B = tmp_B * B_scalar
-            print(tmp_B.dtype)
+            tmp_B = tmp_B.astype(np.complex64)
             write_weight(tmp_B, f"B{index}", 'OI', file)
         if layer.B_bias_bar is not None:
-            tmp_B_bias = layer.B_bias_bar.detach().cpu().numpy()
+            tmp_B_bias = layer.B_bias_bar.detach().cpu().numpy().astype(np.complex64)
             write_weight(tmp_B_bias, f"B{index}_bias", 'C', file)
         if layer.C_bars is not None:
             tmp_C = layer.C_bars.detach().cpu().numpy()
@@ -159,29 +164,31 @@ with open(f'{current_pos}/weights.hpp', "w") as file:
             if tmp_C_bias.dtype in complex_types:
                 print("C_bias is complex, check if it should be")
                 # tmp_C_bias = tmp_C_bias.real
-                tmp_C_bias = np.real(tmp_C_bias)
+                tmp_C_bias = np.real(tmp_C_bias).astype(np.float32)
             write_weight(tmp_C_bias, f"C{index}_bias", 'C', file)
         if layer.SkipLayer is not None:
-            tmp_SkipLayer = layer.SkipLayer.detach().cpu().numpy()
+            tmp_SkipLayer = layer.SkipLayer.detach().cpu().numpy().astype(np.float32)
             tmp_SkipLayer = tmp_SkipLayer * skip_scalar
+            tmp_SkipLayer = tmp_SkipLayer.astype(np.float32)
             write_weight(
                 tmp_SkipLayer, f"SkipLayer{index}_weights", 'OI', file)
 
     if weights_dict.get('year_linear.4.weight', None) is not None:
 
-        tmp_W = weights_dict['year_linear.4.weight'].detach().cpu().numpy()
+        tmp_W = weights_dict['year_linear.4.weight'].detach().cpu().numpy().astype(np.float32)
         tmp_W = tmp_W*skip_scalar
+        tmp_W = tmp_W.astype(np.float32)
         write_weight(tmp_W, 'Decoder_weights', 'OI',  file)
     if weights_dict.get('year_linear.4.bias', None) is not None:
-        tmp_b = weights_dict['year_linear.4.bias'].detach().cpu().numpy()
+        tmp_b = weights_dict['year_linear.4.bias'].detach().cpu().numpy().astype(np.float32)
         write_weight(tmp_b, 'Decoder_bias', 'C', file)
 
 
 with open(f'{current_pos}/network.hpp', "w") as file:
     file.write('#pragma once\n')
-    file.write('#include "./weights.hpp"\n')
-    file.write('#include "./weights_unrolled.hpp"\n')
-    file.write('#include "./NeuralNetwork.hpp"\n')
+    file.write('#include "./include/NeuralNetwork.hpp"\n')
+    file.write('#include "./weights.inc"\n')
+    file.write('#include "./weights_unrolled.inc"\n')
     file.write('\n')
     file.write(f'constexpr std::size_t SUB_BATCH = {SUB_BATCH};\n')
     file.write(
@@ -200,7 +207,8 @@ with open(f'{current_pos}/network.hpp', "w") as file:
             # string += f'    layers::SSMPiano<float>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, Tanh<float>),\n'
             string += f'    layers::SSMPiano<float,Complex<float>,SUB_BATCH,SUB_BATCH>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, FastTanh<float>),\n'
 
-    string += f'    layers::Linear<float,8,"BS">(Decoder_weights_1_1, Decoder_bias, PassThrough<float>),\n'
+    string += f'    layers::Linear<float,2*SUB_BATCH,"BS">(Decoder_weights_1_{W_KP}, Decoder_bias, PassThrough<float>),\n'
+    # string += f'    layers::Linear<float,8,"BS">(Decoder_weights, Decoder_bias, PassThrough<float>),\n'
     file.write(string[:-2] + '\n);\n\n')
 
     # file.write(
@@ -225,8 +233,8 @@ with open(f'{current_pos}/network.hpp', "w") as file:
 # if os.path.exists("a.out"):
 #     os.remove("a.out")
 
-subprocess.run(f"{compiler} -Wall -std=c++20 -Ofast -march=native -ftemplate-depth=10000 -fconstexpr-steps=100000000 -Wall -I {current_pos}/../../ unroll_weights.cpp", shell=True,executable="/bin/bash", stderr=subprocess.STDOUT)
-subprocess.run(f"./a.out", shell=True,executable="/bin/bash", stderr=subprocess.STDOUT)
+subprocess.run(f"{compiler} -Wall -std=c++20 -O0 -ftemplate-depth=10000 -fconstexpr-steps=100000000 -Wall -I {include_path} unroll_weights.cpp -o {current_pos}/weight_unrolling_exec.out", shell=True,executable="/bin/bash", stderr=subprocess.STDOUT)
+subprocess.run(f"./weight_unrolling_exec.out", shell=True,executable="/bin/bash", stderr=subprocess.STDOUT)
 
 #%% 
 if os.path.exists("CppPianoSSM.so"):

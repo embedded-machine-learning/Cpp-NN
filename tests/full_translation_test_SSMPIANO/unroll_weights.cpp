@@ -3,12 +3,12 @@
 #include <fstream>
 #include <string>
 
-#include "./unroll_weights.hpp"
+#include "./include/unroll_weights.hpp"
 
 
-#include "weights.hpp"
+#include "weights.inc"
 
-std::string FilePath = "./weights_unrolled.hpp";
+std::string FilePath = "./weights_unrolled.inc";
 
 // constexpr std::size_t B_KP = 11*4;
 // constexpr std::size_t C_KP = 12*8;
@@ -26,9 +26,9 @@ int main(){
     file << "#pragma once\n\n";
     file << "#include <cstddef>\n";
     file << "#include <complex>\n";
-    file << "#include \"./Matrix.hpp\"\n";
-    file << "#include \"./MatrixOperations.hpp\"\n\n";
-    file << "#include \"./types/Complex.hpp\"\n\n";
+    file << "#include \"./include/Matrix.hpp\"\n";
+    file << "#include \"./include/MatrixOperations.hpp\"\n\n";
+    file << "#include \"./include/types/Complex.hpp\"\n\n";
 
     WRITE_MATRICES(file, B0, 1, B_KP);
     WRITE_MATRICES(file, B1, 1, B_KP);
@@ -40,12 +40,12 @@ int main(){
     WRITE_MATRICES(file, C2, 1, C_KP);
     WRITE_MATRICES(file, C3, 1, C_KP);
 
-    // WRITE_MATRICES(file, SkipLayer0_weights, 1, S_KP); // doe snot exist
+    // WRITE_MATRICES(file, SkipLayer0_weights, 1, S_KP); // does snot exist
     WRITE_MATRICES(file, SkipLayer1_weights, 1, S_KP);
     WRITE_MATRICES(file, SkipLayer2_weights, 1, S_KP);
     WRITE_MATRICES(file, SkipLayer3_weights, 1, S_KP);
 
-    WRITE_MATRICES(file, Decoder_weights, 1, 1);
+    WRITE_MATRICES(file, Decoder_weights, 1, W_KP);
 
 
 

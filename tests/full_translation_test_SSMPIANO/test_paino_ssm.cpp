@@ -3,12 +3,14 @@
 #include <memory>
 #include <tuple>
 
-#include "./NeuralNetwork.hpp"
-#include "./helpers/human_readable_types.hpp"
-#include "./helpers/print.hpp"
-#include "./pybind_interface.hpp"
+#define __LINEAR_FORCE_INLINE__ true // clang will be faster with forced inlining, might break gcc
 
-#include "./hardware/AVX2.hpp" // For AVX2 specific optimizations
+#include "./include/NeuralNetwork.hpp"
+#include "./include/helpers/human_readable_types.hpp"
+#include "./include/helpers/print.hpp"
+#include "./include/pybind_interface.hpp"
+
+#include "./include/hardware/AVX2.hpp" // For AVX2 specific optimizations
 
 #include <chrono>
 
@@ -25,8 +27,8 @@ using Type = helpers::Benchmark::TypeInstance<float>;
 
 #include "./network.hpp"
 
-constexpr Dim_size_t DesiredLength = 44100 * 4; // Desired length of the sequence, can be adjusted
 
+constexpr Dim_size_t DesiredLength = 44100 * 8; // Desired length of the sequence, can be adjusted
 constexpr Dim_size_t batch_size          = 1;
 constexpr Dim_size_t sequence_length_sub = (SUB_BATCH > 1) ? SUB_BATCH * 4 : 1;
 constexpr Dim_size_t sequence_length     = DesiredLength - (DesiredLength) % sequence_length_sub; // better hope the modulo is zero

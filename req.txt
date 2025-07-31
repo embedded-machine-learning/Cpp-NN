@@ -1,3 +1,6 @@
 pybind11
 numpy
 matplotlib
+torchaudio
+tqdm
+pretty_midi

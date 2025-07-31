@@ -4,7 +4,7 @@ def format_float_smart(n):
         if n.is_integer():
             return f"{n:.1f}"  # force .0 for whole floats
         else:
-            return repr(n)     # full precision for non-whole floats
+            return repr(n)     # full precision for non-whole floats (,also adds np.float64, so yeah that breaks it) 
     return str(n)  # leave ints or other types as-is
 
 type_map = {

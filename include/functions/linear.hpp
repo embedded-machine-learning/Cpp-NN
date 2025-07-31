@@ -9,6 +9,11 @@
 #include <type_traits>
 #include <utility>
 
+#ifndef __LINEAR_FORCE_INLINE__
+#warning "__LINEAR_FORCE_INLINE__ is not defined, using default inlining behavior. Consider defining it."
+#define __LINEAR_FORCE_INLINE__ false
+#endif
+
 namespace functions::linear {
 /*
 Reference implementation of a Linear Layer.
@@ -35,8 +40,11 @@ template <std::size_t SuggestedSubBatchSize                         = 1, // unun
           typename Lambda                                           = decltype([]() {}),
           IsMatrixType... ActivationInformationMatrixType>
     requires(IsMACOperation<MACOperator, typename InputMatrixType::value_type, typename WeightMatrixType::value_type, typename BiasMatrixType::value_type>)
-// __attribute__((always_inline)) inline    // Let the compiler decide the inlining 
-inline
+    #if __LINEAR_FORCE_INLINE__
+        __attribute__((always_inline)) inline // Force inlining for performance
+    #else
+        inline // Let the compiler decide the inlining
+    #endif
 void Linear( // Function Parameters
         const InputMatrixType  &Input,
         OutputMatrixType       &Output,
@@ -276,10 +284,11 @@ template <std::size_t SuggestedSubBatchSize                         = 1,
           typename Lambda                                           = decltype([]() {}),
           IsMatrixType... ActivationInformationMatrixType>
     requires(std::tuple_size_v<std::remove_cvref_t<WeightMatrixType>> == 4)
-// __attribute__((always_inline)) inline // Let the compiler decide the inlining
-        // __attribute__((noinline))
-        //
-        inline
+    #if __LINEAR_FORCE_INLINE__
+        __attribute__((always_inline)) inline // Force inlining for performance
+    #else
+        inline // Let the compiler decide the inlining
+    #endif
         void
         Linear( // Function Parameters
                 const InputMatrixType  &Input,
