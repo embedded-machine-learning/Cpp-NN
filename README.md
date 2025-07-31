@@ -48,11 +48,10 @@ The new version is not compadiable with -Os anymore as for some reason functions
 # ARM
 ## Compiler
 We used STM32CubeIDE 1.15.0 with the Tool chain: 'GNU Tools for STM32 (12.3.rel1)'.
-It does not compile with 13.3.rel1 .
 
 We're using C++20
 ## Flags
-We're compiling with O3 or Ofast. Os breaks the compiler sometimes as it stops inline some parts, which leads to insane overhead. Othertimes its realy slow as it didn't inline data loading (and branches instead). 
+We're compiling with O3 or Ofast. Os does not always inline ´__attribute__((always_inline))´ functions, which breaks design choises of this framework. Most data access is behind 3-4 of such functions, and only if they are inlined they can be fully resolved at compiletime leading to zero overhead and essentailly raw pointer operations. 
 
 ### GCC Compiler 
 -flto
@@ -114,7 +113,7 @@ Tiny has slightly inreased in temp. memory compared to the C++17 variation, as i
 | L RZOH       | [1, 1, 1, 1, 1, 1]       |              224592 |                  2944 |                  480 |             1721.41 |        35.1360 |            48.99 |                 94.11 |
 | L RZOH       | [1, 1, 1, 2, 2, 38]      |              224592 |                  2944 |                  480 |              964.38 |        19.4856 |            49.49 |                 94.19 |
 | L RZOH       | [1, 2, 2, 8, 8, 48]      |              224592 |                  2944 |                  480 |              413.89 |         8.4339 |            49.07 |                 93.99 |
-| L RZOH       | [1, 3, 3, 6, 30, 60]     |              224592 |                  2944 |                  480 |              295.64 |       **6.0680**|           48.72 |                 93.09 |
+| L RZOH       | [1, 3, 3, 6, 30, 60]     |              224592 |                  2944 |                  480 |              295.64 |       **6.0680**|         **48.72**|                93.09 |
 | S no RZOH    | [1, 1, 1, 1, 1, 1]       |               80984 |                  1104 |                  472 |              572.50 |        11.6736 |            49.04 |                 93.37 |
 | S no RZOH    | [1, 1, 1, 1, 2, 22]      |               80984 |                  1104 |                  472 |              237.21 |         5.0897 |            46.61 |                 93.47 |
 | S no RZOH    | [1, 1, 3, 6, 6, 42]      |               80984 |                  1104 |                  472 |               93.71 |         2.0427 |            45.88 |                 93.02 |
@@ -122,7 +121,7 @@ Tiny has slightly inreased in temp. memory compared to the C++17 variation, as i
 | S RZOH       | [1, 1, 1, 1, 9, 63]      |               80984 |                  1104 |                  472 |              183.72 |         4.0569 |            45.28 |                 93.18 |
 | S RZOH       | [1, 2, 2, 6, 18, 54]     |               80984 |                  1104 |                  472 |               71.21 |         1.5736 |            45.25 |                 93.05 |
 | S RZOH       | [1, 2, 4, 16, 32, 64]    |               80984 |                  1104 |                  472 |               47.29 |         1.1149 |            42.42 |                 92.02 |
-| S RZOH       | [1, 4, 4, 16, 32, 64]    |               80984 |                  1104 |                  472 |               39.25 |       **0.8689**|           45.17 |                 91.06 |
+| S RZOH       | [1, 4, 4, 16, 32, 64]    |               80984 |                  1104 |                  472 |               39.25 |       **0.8689**|         **45.17**|                91.06 |
 | S RZOH       | [1, 4, 4, 16, 64, 64]    |               80984 |                  1104 |                  472 |               37.44 |         0.8374 |            44.71 |                 90.19 |
 | Tiny no RZOH | [1, 1, 1]                |               33424 |                   704 |                  396 |              193.61 |         4.1833 |            46.28 |                 90.50 |
 | Tiny no RZOH | [1, 1, 5]                |               33424 |                   704 |                  396 |               65.29 |         1.3880 |            47.04 |                 90.62 |
@@ -132,11 +131,12 @@ Tiny has slightly inreased in temp. memory compared to the C++17 variation, as i
 | Tiny RZOH    | [1, 2, 6]                |               33424 |                   704 |                  396 |               46.42 |         1.0290 |            45.11 |                 89.51 |
 | Tiny RZOH    | [1, 5, 20]               |               33424 |                   704 |                  396 |               19.58 |         0.4307 |            45.46 |                 89.12 |
 | Tiny RZOH    | [1, 9, 54]               |               33424 |                   704 |                  396 |               12.13 |         0.2660 |            45.62 |                 88.01 |
-| Tiny RZOH    | [1, 11, 55]              |               33424 |                   704 |                  396 |               11.53 |       **0.2518**|           45.78 |                 87.11 |
+| Tiny RZOH    | [1, 11, 55]              |               33424 |                   704 |                  396 |               11.53 |       **0.2518**|         **45.78**|                87.11 |
 | Tiny RZOH    | [2, 8, 64]               |               33424 |                   704 |                  396 |                8.97 |         0.2092 |            42.85 |                 80.35 |
 | Tiny RZOH    | [3, 12, 48]              |               33424 |                   704 |                  396 |                7.66 |         0.1816 |            42.17 |                 70.32 |
 
 *cursive* means they where measured with a smartphone stop watch, and are therefore highly inaccurate
 
-***bold** are optimization points, the configurations that where hand tuned for maximum performance, which are then applied for all other configurations of that network.
+**bold** are optimization points, the configurations that where hand tuned for maximum performance, which are then applied for all other configurations of that network.
+
 

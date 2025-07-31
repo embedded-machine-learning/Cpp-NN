@@ -229,7 +229,7 @@ subprocess.run(f"./weight_unrolling_exec.out", shell=True,executable="/bin/bash"
 if os.path.exists("CppSEdge.so"):
     os.remove("CppSEdge.so")
 subprocess.run(f"{compiler} -march=native -Os -fstack-usage -Wall -Wpedantic -Winline -shared -std=c++20 -fconstexpr-steps=100000000 -fPIC $(python3 -m pybind11 --includes) -I {include_path} {current_pos}/test_SEdge.cpp -o  {current_pos}/CppSEdge.so", shell=True, executable="/bin/bash", stderr=subprocess.STDOUT)
-# subprocess.run(f"g++-12 -march=native -Wall -Wpedantic -fstack-usage -Wno-inline -Os -fdump-tree-optimized -shared -std=c++20 -fPIC $(python3 -m pybind11 --includes) -I {include_path} {current_pos}/test_SEdge.cpp -o  {current_pos}/CppSEdge.so", shell=True, executable="/bin/bash", stderr=subprocess.STDOUT)
+# subprocess.run(f"g++-12 -march=native -Wall -Wpedantic -fstack-usage -Wno-inline -O3 -fdump-tree-optimized -shared -std=c++20 -fPIC $(python3 -m pybind11 --includes) -I {include_path} {current_pos}/test_SEdge.cpp -o  {current_pos}/CppSEdge.so", shell=True, executable="/bin/bash", stderr=subprocess.STDOUT)
 
 
 # %%

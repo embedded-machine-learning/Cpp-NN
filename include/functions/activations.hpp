@@ -7,7 +7,7 @@ template<typename T>
 constexpr auto PassThrough = [](const T &x) { return x; };
 
 template<typename T>
-constexpr T Tanh = [](const T &x) { return std::tanh(x); };
+constexpr auto Tanh = [](const T &x) { return std::tanh(x); };
 
 // template <typename T>
 // constexpr auto FastTanh = [](const T val){
