@@ -1,3 +1,5 @@
+# C++20 Branch
+The original C++17 has been deprecated, as requires and concepts are just too important for readability and the ability to conditionally enable code.
 
 # CPU
 ## Compiler 
