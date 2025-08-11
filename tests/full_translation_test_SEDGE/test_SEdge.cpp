@@ -1,8 +1,11 @@
 #include <chrono>
 #include <iostream>
 
-// #define __LINEAR_FORCE_INLINE__ false
+#if __clang__
 #define __LINEAR_FORCE_INLINE__ true // faster but can break gcc
+#else
+#define __LINEAR_FORCE_INLINE__ false
+#endif
 
 #include "include/NeuralNetwork.hpp"
 #include "include/helpers/human_readable_types.hpp"
@@ -14,9 +17,11 @@
 #define __OP_COUNTING__ false // Enable Operation counting
 // #define __OP_COUNTING__ true // Enable Operation counting
 
-// #define __BENCHMARK__ 0     // Enable Benchmarking
+#ifndef __BENCHMARK__
+#define __BENCHMARK__ 0     // Enable Benchmarking
 // #define __BENCHMARK__ 1     // Simple Benchmarking
-#define __BENCHMARK__ 2     // Full Benchmarking
+// #define __BENCHMARK__ 2     // Full Benchmarking
+#endif
 
 #if !__OP_COUNTING__
 using Type = float;
