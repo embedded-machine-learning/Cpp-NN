@@ -36,7 +36,7 @@ class SumReduction {
 
 
     template <bool ContinueAfter=true, IsMatrixType InputMatrixType, IsMatrixType OutputMatrixType, IsMatrixType BufferMatrixType, IsMatrixType PermanentMatrixType>
-    __attribute__((always_inline)) inline void operator()(const InputMatrixType &Input, OutputMatrixType &Out, BufferMatrixType &buffer, PermanentMatrixType &permanent) const noexcept {
+    __attribute__((always_inline)) inline void operator()(const InputMatrixType &Input, OutputMatrixType &Out, [[maybe_unused]] BufferMatrixType &buffer, PermanentMatrixType &permanent) const noexcept {
         static_assert(InputMatrixType::order.containsAll(ReductionOrder), "Input must the ReductionOrder in its order");
         static_assert(!OutputMatrixType::order.containsAny(ReductionOrder), "Output must not contain the ReductionOrder in its order");
 

@@ -136,9 +136,11 @@ struct Sequence {
               IsMatrixType                        BufferMatrixType              = Matrix<char, "E", 0>,
               IsMatrixType                        PermanentMatrixType           = Matrix<char, "E", 0>,
               typename CurrentMemoryPlaning                                     = CurrentMemoryPlaning<InputMatrixType>,
-              std::array<MemoryLocation, sizeof...(Layers)> MemoryIndexSchedule = CurrentMemoryPlaning::template memory_index_locations<sizeof(BufferMatrixType::data), 0, 0>>
+              std::array<MemoryLocation, sizeof...(Layers)> MemoryIndexSchedule = CurrentMemoryPlaning::template memory_index_locations<sizeof(BufferMatrixType::data), 0, 0>,
+              typename... ProfilingFunctional>
         requires(At < sizeof...(Layers) - 1) // Ensure at is within bounds
-    __attribute__((always_inline)) inline void operator()(const InputMatrixType &Input, OutputMatrixType &Out, BufferMatrixType &buffer, PermanentMatrixType &permanent) const noexcept {
+    __attribute__((always_inline)) inline void operator()(
+            const InputMatrixType &Input, OutputMatrixType &Out, BufferMatrixType &buffer, PermanentMatrixType &permanent, ProfilingFunctional... profilingFnc) const noexcept {
         static_assert(sizeof(permanent.data) >= CurrentMemoryPlaning::total_memory_permanent, "Permanent Memory Size does not match the required size");
         static_assert(sizeof(buffer.data) >= CurrentMemoryPlaning::total_memory_buffer, "Buffer Memory Size does not match the required size");
         static_assert(IsBaseMatrixType<BufferMatrixType>, "Buffer Matrix Type must be a Base Matrix Type");
@@ -178,7 +180,9 @@ struct Sequence {
 
         if constexpr (continue_after) {
             operator()<ContinueCalculation, At + 1, NextInput, OutputMatrixType, BufferMatrixType, PermanentMatrixType, CurrentMemoryPlaning, MemoryIndexSchedule>(*intermediate_output, Out, buffer,
-                                                                                                                                                                   permanent);
+                                                                                                                                                                   permanent, profilingFnc...);
+        } else {
+            (profilingFnc(), ...);
         }
     }
 
@@ -189,9 +193,11 @@ struct Sequence {
               IsMatrixType                        BufferMatrixType,
               IsMatrixType                        PermanentMatrixType,
               typename CurrentMemoryPlaning                                     = CurrentMemoryPlaning<InputMatrixType>,
-              std::array<MemoryLocation, sizeof...(Layers)> MemoryIndexSchedule = CurrentMemoryPlaning::template memory_index_locations<sizeof(BufferMatrixType::data), 0, 0>>
+              std::array<MemoryLocation, sizeof...(Layers)> MemoryIndexSchedule = CurrentMemoryPlaning::template memory_index_locations<sizeof(BufferMatrixType::data), 0, 0>,
+              typename... ProfilingFunctional>
         requires(At >= sizeof...(Layers) - 1) // Ensure at is within bounds
-    __attribute__((always_inline)) inline void operator()(const InputMatrixType &Input, OutputMatrixType &Out, BufferMatrixType &buffer, PermanentMatrixType &permanent) const noexcept {
+    __attribute__((always_inline)) inline void operator()(
+            const InputMatrixType &Input, OutputMatrixType &Out, BufferMatrixType &buffer, PermanentMatrixType &permanent, ProfilingFunctional... profilingFnc) const noexcept {
         static_assert(sizeof(permanent.data) >= CurrentMemoryPlaning::total_memory_permanent, "Permanent Memory Size does not match the required size");
         static_assert(sizeof(buffer.data) >= CurrentMemoryPlaning::total_memory_buffer, "Buffer Memory Size does not match the required size");
         static_assert(IsBaseMatrixType<BufferMatrixType>, "Buffer Matrix Type must be a Base Matrix Type");
@@ -222,6 +228,9 @@ struct Sequence {
 
         // Call the current layer's operator
         std::get<At>(layers).template operator()<continue_after>(Input, Out, *layer_buffer, *layer_permanent);
+
+        // Call the profiling functions if provided
+        (profilingFnc(), ...);
     }
 };
 

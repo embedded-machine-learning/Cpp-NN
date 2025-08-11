@@ -10,9 +10,15 @@
 
 std::string FilePath = "./weights_unrolled.inc";
 
-// #define CONDITIONAL_WRITE_MATRICES(file, index, matrix_base, batch_size, kernel_parallel) WRITE_MATRICES(file, matrix_base ## index , batch_size, kernel_parallel)
-#define CONDITIONAL_WRITE_MATRICES(file, index, matrix_base, batch_size, kernel_parallel) WRITE_MULTI_UNROLLED_WEIGHTS(file, matrix_base ## index , batch_size, kernel_parallel)
+#define UNROLL_UPTO false
+// #define UNROLL_UPTO true     // Enable this if you want to write all weights upto the kernel_parallel value, used for exporting to the ARM Cortex M4, to tune the performance
 
+
+#if UNROLL_UPTO
+#define CONDITIONAL_WRITE_MATRICES(file, index, matrix_base, batch_size, kernel_parallel) WRITE_MULTI_UNROLLED_WEIGHTS(file, matrix_base ## index , batch_size, kernel_parallel)
+#else
+#define CONDITIONAL_WRITE_MATRICES(file, index, matrix_base, batch_size, kernel_parallel) WRITE_MATRICES(file, matrix_base ## index , batch_size, kernel_parallel)
+#endif
 
 
 int main(){
@@ -33,7 +39,7 @@ int main(){
     #if 0<NUMBER_OF_LAYERS
     CONDITIONAL_WRITE_MATRICES(file, 0, B, 1, B_KP);
     CONDITIONAL_WRITE_MATRICES(file, 0, C, 1, C_KP);
-    CONDITIONAL_WRITE_MATRICES(file, 0, SkipLayer, 1, S_KP); // doe snot exist
+    CONDITIONAL_WRITE_MATRICES(file, 0, SkipLayer, 1, S_KP); 
     #endif 
     #if 1<NUMBER_OF_LAYERS
     CONDITIONAL_WRITE_MATRICES(file, 1, B, 1, B_KP);

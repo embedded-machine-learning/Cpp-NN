@@ -21,6 +21,7 @@ union m128 {
     } data;
 
     __m128 m128;
+    __m128d m128d;
 };
 
 template <std::size_t KernelPeralell, typename Type>
@@ -80,19 +81,19 @@ __attribute__((always_inline)) inline void vectorComplexMultiplyAccumulate<4, fl
     // const m256 vinput{{input, input, input, input, input, input, input, input}};
     const m256 vinput{.m256 = _mm256_broadcast_ss(&input)};
 
-    const m256 vweight{.m256 = _mm256_load_pd(reinterpret_cast<const double *>(&weights[0]))}; // complex<float> is 2 floats, so we can load it as a float array // very ugly but works
-    m256       vacc{.m256 = _mm256_load_pd(reinterpret_cast<double *>(&acc[0][0]))};           // complex<float> is 2 floats, so we can load it as a float array // very ugly but works
+    const m256 vweight{.m256d = _mm256_load_pd(reinterpret_cast<const double *>(&weights[0]))}; // complex<float> is 2 floats, so we can load it as a float array // very ugly but works
+    m256       vacc{.m256d = _mm256_load_pd(reinterpret_cast<double *>(&acc[0][0]))};           // complex<float> is 2 floats, so we can load it as a float array // very ugly but works
     vacc.m256 = _mm256_fmadd_ps(vweight.m256, vinput.m256, vacc.m256);
-    _mm256_store_pd(reinterpret_cast<double *>(&acc[0][0]), vacc.m256); // at this point lets also store using the m256 union // very ugly but works
+    _mm256_store_pd(reinterpret_cast<double *>(&acc[0][0]), vacc.m256d); // at this point lets also store using the m256 union // very ugly but works
 }
 
 template <>
 __attribute__((always_inline)) inline void vectorComplexMultiplyAccumulate<2, float>(std::array<float, 2> (&acc)[2], const float &input, const Complex<float> (&weights)[2]) {
     const m128 vinput{.m128 = _mm_broadcast_ss(&input)};   // complex<float> is 2 floats, so we can broadcast it as a double // very ugly but works
-    const m128 vweight{.m128 = _mm_load_pd(reinterpret_cast<const double *>(&weights[0]))}; // complex<float> is 2 floats, so we can load it as a float array // very ugly but works
-    m128       vacc{.m128 = _mm_load_pd(reinterpret_cast<double *>(&acc[0]))};              // complex<float> is 2 floats, so we can load it as a float array // very ugly but works
+    const m128 vweight{.m128d = _mm_load_pd(reinterpret_cast<const double *>(&weights[0]))}; // complex<float> is 2 floats, so we can load it as a float array // very ugly but works
+    m128       vacc{.m128d = _mm_load_pd(reinterpret_cast<double *>(&acc[0]))};              // complex<float> is 2 floats, so we can load it as a float array // very ugly but works
     vacc.m128 = _mm_fmadd_ps(vweight.m128, vinput.m128, vacc.m128);
-    _mm_store_pd(reinterpret_cast<double *>(&acc[0][0]), vacc.m128); // at this point lets also store using the m256 union // very ugly but works
+    _mm_store_pd(reinterpret_cast<double *>(&acc[0][0]), vacc.m128d); // at this point lets also store using the m256 union // very ugly but works
 }
 
 template <std::size_t KernelPeralell, typename Type>
@@ -113,26 +114,26 @@ __attribute__((always_inline)) inline void vectorRealOnlyMultiplyAccumulate<4, f
     //      std::real(input), std::imag(input),
     //      std::real(input), std::imag(input)}};    // gets incorrectly
     // loaded
-    const m256 vinput{.m256 = _mm256_broadcast_sd(reinterpret_cast<const double *>(&input))}; // complex<float> is 2 floats, so we can broadcast it as a double // very ugly but works
+    const m256 vinput{.m256d = _mm256_broadcast_sd(reinterpret_cast<const double *>(&input))}; // complex<float> is 2 floats, so we can broadcast it as a double // very ugly but works
 
     // const m256 vweight{{std::real(weights[0]), std::imag(weights[0]), // also dosent work bc compiler sees it as something else and wants to blend it
     //                     std::real(weights[1]), std::imag(weights[1]), //
     //                     std::real(weights[2]), std::imag(weights[2]), //
     //                     std::real(weights[3]), std::imag(weights[3])}};
-    const m256 vweight{.m256 = _mm256_load_pd(reinterpret_cast<const double *>(&weights[0]))}; // complex<float> is 2 floats, so we can load it as a float array // very ugly but works
+    const m256 vweight{.m256d = _mm256_load_pd(reinterpret_cast<const double *>(&weights[0]))}; // complex<float> is 2 floats, so we can load it as a float array // very ugly but works
 
     // m256 vacc{{acc[0][0], acc[0][1], // 
     //            acc[1][0], acc[1][1], //
     //            acc[2][0], acc[2][1], //
     //            acc[3][0], acc[3][1]}};
-    m256 vacc{.m256 = _mm256_load_pd(reinterpret_cast<double *>(&acc[0]))}; // complex<float> is 2 floats, so we can load it as a float array // very ugly but works
+    m256 vacc{.m256d = _mm256_load_pd(reinterpret_cast<double *>(&acc[0]))}; // complex<float> is 2 floats, so we can load it as a float array // very ugly but works
     vacc.m256 = _mm256_fmadd_ps(vweight.m256, vinput.m256, vacc.m256);
 
     // #pragma GCC unroll(65534)
     //     for (std::size_t kernel_parallel = 0; kernel_parallel < 4; kernel_parallel++) {
     //         acc[kernel_parallel]=std::array<float,2>{vacc.data.data[2*kernel_parallel],vacc.data.data[2*kernel_parallel + 1]};
     //     }
-    _mm256_store_pd(reinterpret_cast<double *>(&acc[0]), vacc.m256); // at this point lets also store using the m256 union // very ugly but works
+    _mm256_store_pd(reinterpret_cast<double *>(&acc[0]), vacc.m256d); // at this point lets also store using the m256 union // very ugly but works
 }
 
 template <>

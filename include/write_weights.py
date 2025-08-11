@@ -8,8 +8,8 @@ def format_float_smart(n):
     return str(n)  # leave ints or other types as-is
 
 type_map = {
-    np.dtype(np.float64):       {"type": "double",                "write_fnction": lambda value: f"{format_float_smart(value)}"},                                                             
-    np.dtype(np.float32):       {"type": "float",                 "write_fnction": lambda value: f"(float){format_float_smart(value)}"},                                         
+    np.dtype(np.float64):       {"type": "double",                "write_fnction": lambda value: f"(double){format_float_smart(value)}"},                                                             
+    np.dtype(np.float32):       {"type": "float",                 "write_fnction": lambda value: f"(float){format_float_smart(value)}f"},                                         
     np.dtype(np.complex128):    {"type": "Complex<double>",       "write_fnction": lambda value: f"Complex<double>({format_float_smart(np.real(value))}, {format_float_smart(np.imag(value))})"},                                                         
     np.dtype(np.complex64):     {"type": "Complex<float>",        "write_fnction": lambda value: f"Complex<float>({format_float_smart(np.real(value))}f, {format_float_smart(np.imag(value))}f)"},                                                     
     np.dtype(np.int64):         {"type": "int64_t",               "write_fnction": lambda value: f"{value}"},                                         
