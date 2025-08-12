@@ -3,8 +3,8 @@ The original C++17 has been deprecated, as requires and concepts are just too im
 
 # CPU
 ## Compiler 
-It was tested with Clang++-18 [Ubuntu clang version 18.1.6 (++20240518023229+1118c2e05e67-1~exp1~20240518143321.130)] .
-As well as g++-12 [gcc version 12.3.0 (Ubuntu 12.3.0-1ubuntu1~22.04)].
+It was tested with Clang++-18 [```Ubuntu clang version 18.1.6 (++20240518023229+1118c2e05e67-1~exp1~20240518143321.130)```] .
+As well as g++-12 [```gcc version 12.3.0 (Ubuntu 12.3.0-1ubuntu1~22.04)```].
 
 ## Flags
 ### LLVM
