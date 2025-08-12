@@ -125,12 +125,8 @@ constexpr void matrixAssign(MatrixTypeA &&a, MatrixTypeB &&b) {
 template <Dim_size_t Align, IsMatrixType... Matrixes>
 struct AlignedMatrixCollection;
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wzero-length-array"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-
 template <Dim_size_t Align, IsMatrixType CurrentMatrix, IsMatrixType... OtherMatrixes>
+requires(sizeof(CurrentMatrix)%Align != 0 && sizeof...(OtherMatrixes) > 0)
 struct AlignedMatrixCollection<Align, CurrentMatrix, OtherMatrixes...> {
     using Type = MaterializedMatrix<CurrentMatrix>;
     Type                                             data;
@@ -158,6 +154,7 @@ struct AlignedMatrixCollection<Align, CurrentMatrix, OtherMatrixes...> {
 };
 
 template <Dim_size_t Align, IsMatrixType CurrentMatrix>
+requires(sizeof(CurrentMatrix)%Align != 0)
 struct AlignedMatrixCollection<Align, CurrentMatrix> {
     using Type = MaterializedMatrix<CurrentMatrix>;
     Type data;
@@ -178,8 +175,54 @@ struct AlignedMatrixCollection<Align, CurrentMatrix> {
     }
 };
 
-#pragma clang diagnostic pop
-#pragma GCC diagnostic pop
+
+template <Dim_size_t Align, IsMatrixType CurrentMatrix, IsMatrixType... OtherMatrixes>
+requires(sizeof(CurrentMatrix)%Align == 0 && sizeof...(OtherMatrixes) > 0)
+struct AlignedMatrixCollection<Align, CurrentMatrix, OtherMatrixes...> {
+    using Type = MaterializedMatrix<CurrentMatrix>;
+    Type                                             data;
+    AlignedMatrixCollection<Align, OtherMatrixes...> other_matrixes;
+
+    constexpr AlignedMatrixCollection(CurrentMatrix &&matrix, OtherMatrixes &&...other_matrixes)
+            : data(std::forward<CurrentMatrix>(matrix)), other_matrixes(std::forward<OtherMatrixes>(other_matrixes)...) {
+    }
+
+    constexpr AlignedMatrixCollection() = default;
+
+    // static_assert(sizeof...(OtherMatrixes)+1>0, "Disablöed for the time being, as it is not used in the codebase");
+
+    template <std::size_t I>
+    constexpr auto &get() const {
+        if constexpr (I == 0) {
+            return data;
+        } else if constexpr (I < sizeof...(OtherMatrixes) + 1) {
+            return other_matrixes.template get<I - 1>();
+        } else {
+            static_assert(I < sizeof...(OtherMatrixes) + 1, "Out of bounds access in AlignedMatrixCollection");
+        }
+    }
+};
+
+template <Dim_size_t Align, IsMatrixType CurrentMatrix>
+requires(sizeof(CurrentMatrix)%Align == 0)
+struct AlignedMatrixCollection<Align, CurrentMatrix> {
+    using Type = MaterializedMatrix<CurrentMatrix>;
+    Type data;
+
+    constexpr AlignedMatrixCollection(CurrentMatrix &&matrix) : data(std::forward<CurrentMatrix>(matrix)) {
+    }
+
+    constexpr AlignedMatrixCollection() = default;
+
+    template <std::size_t I>
+    constexpr auto &get() const {
+        if constexpr (I == 0) {
+            return data;
+        } else {
+            static_assert(I == 0, "Out of bounds access in AlignedMatrixCollection");
+        }
+    }
+};
 
 template <Dim_size_t Align, IsMatrixType... Matrixes>
 constexpr auto makeAlignedMatrixCollection(Matrixes &&...matrices) {
