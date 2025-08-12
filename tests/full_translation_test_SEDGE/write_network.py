@@ -2,16 +2,12 @@ import os
 import sys
 import numpy as np
 
-
-include_path = '../../'
-
-sys.path.append(os.path.join(os.path.dirname(__file__),include_path, "include"))
-from write_weights import write_weight
-
 complex_types = [np.complex64, np.complex128]
 
+def write_network_weights(weights_dict, step_scale, file, Cpp_NN_include_path):
+    sys.path.append(Cpp_NN_include_path)
+    from write_weights import write_weight
 
-def write_network_weights(weights_dict, step_scale, file):
     for index, layer in enumerate(weights_dict):
         print(weights_dict[index].keys())
         if 'A' in weights_dict[index].keys():
@@ -66,7 +62,10 @@ def write_network_weights(weights_dict, step_scale, file):
 
 
 
-def write_network(weights_dict, file, B_KP=(12*4), C_KP=(12*8), S_KP=(14*8), W_KP=(14*8)):
+def write_network(weights_dict, file, Cpp_NN_include_path, B_KP=(12*4), C_KP=(12*8), S_KP=(14*8), W_KP=(14*8)):
+    sys.path.append(Cpp_NN_include_path)
+    from write_weights import write_weight
+    
     file.write('// const auto __attribute__(( section(".data") )) network=layers::Sequence(\n')
     file.write('const auto network=layers::Sequence(\n')
     string = ""

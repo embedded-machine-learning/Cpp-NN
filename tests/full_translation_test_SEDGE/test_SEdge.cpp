@@ -177,6 +177,10 @@ auto getStepScaleTImes() {
     return array;
 }
 
+std::string getMetaInfo(){
+    return MetaInfo;
+}
+
 PYBIND11_MODULE(CppSEdge, m) {
     m.doc() = "Runs the Network";
 
@@ -184,4 +188,5 @@ PYBIND11_MODULE(CppSEdge, m) {
     m.def("printModelInfo", &printModelInfo, "Prints the model information");
     m.def("getInputSize", &getInputSize, "Returns the input size of the network");
     m.def("getStepScaleTimes", &getStepScaleTImes, "Returns the step scale times of the network");
+    m.def("getMetaInfo", &getMetaInfo, "Returns the meta information of the network");
 }
