@@ -33,7 +33,7 @@ def write_weight(weight:np.ndarray, name:str, order:str, fileobject):
         raise ValueError(f"Unsupported dtype {weight.dtype} for weight")
     type = type_map[weight.dtype]
 
-    fileobject.write(f'constexpr Matrix<{type['type']},"{order}",{','.join(map(str, weight.shape))}> {name} = ')
+    fileobject.write(f'constexpr Matrix<{type["type"]},"{order}",{",".join(map(str, weight.shape))}> {name} = ')
     weights = weight.flatten()
     fileobject.write("{{")
     for i, value in enumerate(weights):
