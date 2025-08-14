@@ -142,3 +142,26 @@ Tiny has slightly inreased in temp. memory compared to the C++17 variation, as i
 **bold** are optimization points, the configurations that where hand tuned for maximum performance, which are then applied for all other configurations of that network.
 
 
+## Citation
+Please use the following when citing our work:
+```
+@article{bittner2025sedge,
+  author       = {Matthias Bittner and
+                  Daniel Schnöll and
+                  Matthias Wess and
+                  Axel Jantsch},
+  title        = {Efficient and interpretable raw audio classification with diagonal
+                  state space models},
+  journal      = {Mach. Learn.},
+  volume       = {114},
+  number       = {8},
+  pages        = {175},
+  year         = {2025},
+  url          = {https://doi.org/10.1007/s10994-025-06807-z},
+  doi          = {10.1007/S10994-025-06807-Z},
+  timestamp    = {Sun, 29 Jun 2025 21:59:59 +0200},
+  biburl       = {https://dblp.org/rec/journals/ml/BittnerSWJ25.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+```
+
