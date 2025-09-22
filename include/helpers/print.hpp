@@ -68,11 +68,7 @@ std::basic_ostream<Ch, Tr> &operator<<(std::basic_ostream<Ch, Tr> &os, const Mat
 
 template <IsMatrixType MatrixType>
     requires(MatrixType::number_of_dimensions == 2)
-void print2DMatrix(const MatrixType &matrix) {
-    std::cout << "Matrix of type: " << human_readable_type<MatrixType> << "\n";
-    std::cout << "Order: " << matrix.order << "\n";
-    std::cout << "Dimensions: " << matrix.dimensions << "\n";
-    std::cout << "Data:\n";
+void print2DMatrix_(const MatrixType &matrix) {
     constexpr std::size_t value_length = 10; // Length of each value when printed
     // Print the second dimension header, with an arrow horizontally ( j itterator)
     constexpr std::size_t header_length = (MatrixType::dimensions[1] * value_length) / 2 + 2; // +2 for the arrow
@@ -86,12 +82,53 @@ void print2DMatrix(const MatrixType &matrix) {
         default: std::cout << "   "; break;                       // Other rows
         }
         for (Dim_size_t j = 0; j < matrix.dimensions[1]; ++j) {
-            printf("%8.1e, ", static_cast<float>(matrix.at(i, j))); // Print each element with 4 decimal places
+            if constexpr (std::is_floating_point_v<typename MatrixType::value_type>) {
+                printf("%8.1e, ", static_cast<float>(matrix.at(i, j))); // Print each element with 4 decimal places
+            } else if constexpr (std::is_integral_v<typename MatrixType::value_type>) {
+                printf("%8ld, ", static_cast<long>(matrix.at(i, j))); // Print each element with 4 decimal places
+            } else {
+                printf("%8.1e, ", static_cast<float>(matrix.at(i, j))); // just try to print it as float
+            }
         }
         std::cout << "\b\b\n";
     }
 }
 
+template <IsMatrixType MatrixType>
+    requires(MatrixType::number_of_dimensions == 2)
+void print2DMatrix(const MatrixType &matrix) {
+    std::cout << "Matrix of type: " << human_readable_type<MatrixType> << "\n";
+    std::cout << "Order: " << matrix.order << "\n";
+    std::cout << "Dimensions: " << matrix.dimensions << "\n";
+    std::cout << "Data:\n";
+    print2DMatrix_(matrix);
+}
+
+template <IsMatrixType MatrixType>
+    requires(MatrixType::number_of_dimensions > 2)
+void printNDMatrix_(const MatrixType &matrix) {
+    for (Dim_size_t i = 0; i < matrix.dimensions[0]; ++i) {
+        std::cout << MatrixType::order[0] << " = " << i << ":\n";
+        printNDMatrix_(collapse<MatrixType::order.range(0, 2), MatrixType::order.range(1, 2)>(slice<MatrixType::order.range(0, 1), 1>(matrix, {i})));
+        std::cout << "\n";
+    }
+}
+
+template <IsMatrixType MatrixType>
+    requires(MatrixType::number_of_dimensions == 2)
+void printNDMatrix_(const MatrixType &matrix) {
+    print2DMatrix_(matrix);
+}
+
+template <IsMatrixType MatrixType>
+    requires(MatrixType::number_of_dimensions >= 2)
+void printNDMatrix(const MatrixType &matrix) {
+    std::cout << "Matrix of type: " << human_readable_type<MatrixType> << "\n";
+    std::cout << "Order: " << matrix.order << "\n";
+    std::cout << "Dimensions: " << matrix.dimensions << "\n";
+    std::cout << "Data:\n";
+    printNDMatrix_(matrix);
+}
 
 template <std::same_as<layers::MemoryLocation> T>
 std::ostream &operator<<(std::ostream &os, const T memory_location) {
@@ -123,13 +160,10 @@ void printBenchmark() {
     std::cout << "counted_extractions     : " << helpers::Benchmark::TypeInstance<Type>::counted_extractions << std::endl;
     std::cout << "counted_abs             : " << helpers::Benchmark::TypeInstance<Type>::counted_abs << std::endl;
     std::cout << "--------------------------" << std::endl;
-    std::cout << "Total counted operations: " << helpers::Benchmark::TypeInstance<Type>::counted_multiplications +
-                 helpers::Benchmark::TypeInstance<Type>::counted_additions +
-                 helpers::Benchmark::TypeInstance<Type>::counted_divisions +
-                 helpers::Benchmark::TypeInstance<Type>::counted_subtractions +
-                 helpers::Benchmark::TypeInstance<Type>::counted_comparisons +
-                 helpers::Benchmark::TypeInstance<Type>::counted_extractions +
-                 helpers::Benchmark::TypeInstance<Type>::counted_abs
-              << std::endl; 
+    std::cout << "Total counted operations: "
+              << helpers::Benchmark::TypeInstance<Type>::counted_multiplications + helpers::Benchmark::TypeInstance<Type>::counted_additions +
+                         helpers::Benchmark::TypeInstance<Type>::counted_divisions + helpers::Benchmark::TypeInstance<Type>::counted_subtractions +
+                         helpers::Benchmark::TypeInstance<Type>::counted_comparisons + helpers::Benchmark::TypeInstance<Type>::counted_extractions + helpers::Benchmark::TypeInstance<Type>::counted_abs
+              << std::endl;
     std::cout << "--------------------------" << std::endl;
 }

@@ -59,6 +59,13 @@ struct DimensionOrder {
     consteval type operator[](std::size_t index) const noexcept {
         return order[index];
     }
+    consteval DimensionOrder range(std::size_t index_start, std::size_t index_stop) const noexcept {
+        DimensionOrder result = DimensionOrder("");
+        for (std::size_t i = index_start; i < index_stop && i < max_length; i++) {
+            result.order[i - index_start] = order[i];
+        }
+        return result;
+    }
 
     constexpr std::size_t length() const noexcept {
         std::size_t length = 0;
@@ -174,6 +181,33 @@ struct DimensionOrder {
         return result;
     }
 
+    template <std::size_t N>
+    consteval DimensionOrder multiInsert(const std::array<char, N> &at, const std::array<DimensionOrder, N> &other) const {
+        DimensionOrder result = *this;
+        for (std::size_t n = 0; n < N; n++) {
+#if __cpp_exceptions == 199711
+            std::size_t length = result.length();
+            if (length + other[n].length() - 1 > max_length) {
+                throw std::range_error("Combined dimension order exceeds maximum length");
+            }
+#endif
+            std::size_t index = 0;
+            DimensionOrder ref = result;
+            for (std::size_t i = 0; i < max_length; i++) {
+                result.order[i] = ref[index];
+                index++;
+                if (result.order[i] == at[n]) {
+                    for (std::size_t j = 0; j < other[n].length(); j++) {
+                        result.order[i] = other[n].order[j];
+                        i++;
+                    }
+                    i--; // Adjust index to account for the extra character inserted
+                }
+            }
+        }
+        return result;
+    }
+
     consteval DimensionOrder remove(const type &c) const {
         DimensionOrder result = *this;
         std::size_t    index  = 0;
@@ -211,6 +245,16 @@ struct DimensionOrder {
         }
         return max_length; // return max_length if not found
     }
+
+    consteval DimensionOrder toLowerCase() const noexcept {
+        DimensionOrder result = *this;
+        for (std::size_t i = 0; i < max_length; i++) {
+            if (result.order[i] >= 'A' && result.order[i] <= 'Z') {
+                result.order[i] += ('a' - 'A');
+            }
+        }
+        return result;
+    }
 };
 
 template <Dim_size_t... Dims>
@@ -230,7 +274,7 @@ constexpr std::array<Dim_size_t, sizeof...(Dims)> calculateOffsets(std::array<Di
     return dimensions;
 }
 
-#if false
+#if true
 #include <iostream>
 
 template <size_t N>
@@ -365,11 +409,7 @@ struct ReplacedMatrixType;
 template <IsMatrixType BaseMatrixType, typename VariadicIndices>
 struct NegativeMatrixType;
 
-template <IsMatrixType                                                                                    BaseMatrixType,
-          DimensionOrder                                                                                  Old,
-          DimensionOrder                                                                                  New,
-          std::array<Dim_size_t, New.length()> NewDimensions,
-          typename... VarVariadicIndices>
+template <IsMatrixType BaseMatrixType, DimensionOrder Old, DimensionOrder New, std::array<Dim_size_t, New.length()> NewDimensions, typename... VarVariadicIndices>
     requires(Old.length() == 1 && std::remove_cvref_t<BaseMatrixType>::order.contains(Old[0]) && !std::remove_cvref_t<BaseMatrixType>::order.remove(Old[0]).containsAny(New) && New.unique())
 struct SplitMatrixType;
 

@@ -204,7 +204,7 @@ class DSSMLayer {
             // May use fused activation function, as the order of the sequence is consistent as it is a single sequence
             // x[t] = A*x[t-1] + BU + BBias
             functions::linear::Linear<SuggestedSubBatchSizeComplex, DefaultMACOperation>(
-                    input_collapsed, state, bmatrix_, bbias_, [](const auto bu, const auto x, const auto a) { return x * a + bu; }, state, a_broadcasted);
+                    input_collapsed, state, bmatrix_, bbias_, [](const auto bu, const auto x, const auto a) { return a*x + bu; }, state, a_broadcasted);
             if constexpr (!ContinueAfter) {
                 // If we do not continue after this layer, we can just return here
                 return;
