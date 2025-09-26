@@ -274,7 +274,7 @@ constexpr std::array<Dim_size_t, sizeof...(Dims)> calculateOffsets(std::array<Di
     return dimensions;
 }
 
-#if true
+#if false
 #include <iostream>
 
 template <size_t N>

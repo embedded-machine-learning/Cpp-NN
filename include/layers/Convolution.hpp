@@ -1,6 +1,9 @@
 #pragma once
 
 #warning "Work in progress, do not use yet"
+#warning "Order is not optimized"
+#warning "High performance Linear op never tested"
+#warning "TODO: add padding, move transfomation to matrix.hpp"
 
 #include <array>
 #include <concepts>
@@ -120,7 +123,7 @@ struct Image2ColMatrixType< // Focred linebreak
 
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions)
-    __attribute__((always_inline)) inline std::array<Dim_size_t, original_number_of_dimensions> calc_positions(const DimTypes... dim) const {
+    __attribute__((always_inline)) inline std::array<Dim_size_t, original_number_of_dimensions> calculatePositions(const DimTypes... dim) const {
         constexpr auto                                       permutation_order = order_traverse_ez_at_back.template permutationOrderComputation<number_of_dimensions>(order);
         const std::array<Dim_size_t, number_of_dimensions>   dims              = {std::get<permutation_order[VariadicIndices]>(std::make_tuple(dim...))...};
         const std::array<Dim_size_t, TraverseOrder.length()> traverse_indices  = {dims[number_of_dimensions - 2 * TraverseOrder.length() + TraverseVariadicIndices]...};
@@ -140,7 +143,7 @@ struct Image2ColMatrixType< // Focred linebreak
         requires(sizeof...(DimTypes) == number_of_dimensions && !std::is_const_v<std::remove_reference_t<storage_type>>)
     __attribute__((always_inline)) inline value_type &at(const DimTypes... dim) {
         checkBounds<dimensions[VariadicIndices]...>({(Dim_size_t)dim...});
-        const auto full_dims_original_order = calc_positions(dim...);
+        const auto full_dims_original_order = calculatePositions(dim...);
         return data.template at<original_order>(std::get<OriginalVariadicIndices>(full_dims_original_order)...);
     }
 
@@ -148,7 +151,7 @@ struct Image2ColMatrixType< // Focred linebreak
         requires(sizeof...(DimTypes) == number_of_dimensions)
     __attribute__((always_inline)) constexpr inline value_type at(const DimTypes... dim) const {
         checkBounds<dimensions[VariadicIndices]...>({(Dim_size_t)dim...});
-        const auto full_dims_original_order = calc_positions(dim...);
+        const auto full_dims_original_order = calculatePositions(dim...);
         return data.template at<original_order>(std::get<OriginalVariadicIndices>(full_dims_original_order)...);
     }
 
@@ -284,25 +287,29 @@ class ConvolutionLayer {
 
     // To catch all the cases where the operator is not implemented, at the same time define the parameters
     template <IsMatrixType InputMatrixType, IsMatrixType OutputMatrixType, IsMatrixType BufferMatrixType, IsMatrixType PermanentMatrixType, std::size_t... I>
-    __attribute__((always_inline)) inline void operator()(const InputMatrixType &Input, OutputMatrixType &Out, BufferMatrixType &buffer, PermanentMatrixType &permanent, const std::index_sequence<I...> = std::make_index_sequence<sizeof...(ActivationMatrixInformation)>()) const noexcept {
+    __attribute__((always_inline)) inline void operator()(const InputMatrixType &Input,
+                                                          OutputMatrixType      &Out,
+                                                          BufferMatrixType      &buffer,
+                                                          PermanentMatrixType   &permanent,
+                                                          const std::index_sequence<I...> = std::make_index_sequence<sizeof...(ActivationMatrixInformation)>()) const noexcept {
         // constexpr Dim_size_t input_batch    = (InputMatrixType::order.contains('B') ? InputMatrixType::dimensions[InputMatrixType::order.indexOf('B')] : 1);
         // constexpr Dim_size_t input_sequence = (InputMatrixType::order.contains('S') ? InputMatrixType::dimensions[InputMatrixType::order.indexOf('S')] : 1);
 
-        const auto Input_expanded = conditionalBroadcast<"B">(Input);
-        auto Output_expanded   = conditionalBroadcast<"B">(Out);
+        const auto Input_expanded  = conditionalBroadcast<"B">(Input);
+        auto       Output_expanded = conditionalBroadcast<"B">(Out);
 
-        auto im2_col_transformed           = im2col<TraverseDimensions, InternalTraverseAddedDimensions, KernelSizes, Strides, Dilations>(Input_expanded);
-        std::cout << "Im2Col Transformed: " << im2_col_transformed << std::endl;
-        auto im2_col_transformed_collapsed = collapse<DimensionOrder("B")+TraverseDimensions, "B">(collapse<InternalTraverseAddedDimensions + "C", "C">(im2_col_transformed));
-        std::cout << "Im2Col Transformed Collapsed: " << im2_col_transformed_collapsed << std::endl;
+        auto im2_col_transformed = im2col<TraverseDimensions, InternalTraverseAddedDimensions, KernelSizes, Strides, Dilations>(Input_expanded);
+        // std::cout << "Im2Col Transformed: " << im2_col_transformed << std::endl;
+        auto im2_col_transformed_collapsed = collapse<DimensionOrder("B") + TraverseDimensions, "B">(collapse<InternalTraverseAddedDimensions + "C", "C">(im2_col_transformed));
+        // std::cout << "Im2Col Transformed Collapsed: " << im2_col_transformed_collapsed << std::endl;
 
-        std::cout << "weights: " << weights_ << std::endl;
-        auto weights_matrix_transformed    = collapse<TraverseDimensions + "I", "I">(weights_);
-        std::cout << "weights transformed: " << weights_matrix_transformed << std::endl;
+        // std::cout << "weights: " << weights_ << std::endl;
+        auto weights_matrix_transformed = collapse<TraverseDimensions + "I", "I">(weights_);
+        // std::cout << "weights transformed: " << weights_matrix_transformed << std::endl;
 
-        std::cout << "output: " << Out << std::endl;
-        auto out2_col_transformed          = collapse<DimensionOrder("B")+TraverseDimensions, "B">(Output_expanded);
-        std::cout << "output collapsed: " << out2_col_transformed << std::endl;
+        // std::cout << "output: " << Out << std::endl;
+        auto out2_col_transformed = collapse<DimensionOrder("B") + TraverseDimensions, "B">(Output_expanded);
+        // std::cout << "output collapsed: " << out2_col_transformed << std::endl;
         functions::linear::Linear(im2_col_transformed_collapsed, out2_col_transformed, weights_matrix_transformed, bias_, Act, std::get<I>(activation_parameters_)...);
     }
 };
