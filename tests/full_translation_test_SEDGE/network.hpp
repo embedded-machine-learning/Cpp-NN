@@ -5,7 +5,8 @@
 
 // const auto __attribute__(( section(".data") )) network=layers::Sequence(
 const auto network=layers::Sequence(
-    layers::Sedge<float,Complex<float>>(A0, B0_1_48, B0_bias, C0_1_96, C0_bias, SkipLayer0_1_112, LeakyReLU<float>),
+    // layers::Sedge<float,Complex<float>>(A0, Matrix<float,"E",1>{},Matrix<float,"E",1>{}, C0_1_96, C0_bias, SkipLayer0_1_112, LeakyReLU<float>),
+    layers::SedgeFirstLayerOp<float,Complex<float>>(A0, C0_1_96, C0_bias, SkipLayer0_1_112, LeakyReLU<float>),
     layers::Sedge<float,Complex<float>>(A1, B1_1_48, B1_bias, C1_1_96, C1_bias, SkipLayer1_1_112, LeakyReLU<float>),
     layers::Sedge<float,Complex<float>>(A2, B2_1_48, B2_bias, C2_1_96, C2_bias, SkipLayer2_1_112, LeakyReLU<float>),
     layers::Sedge<float,Complex<float>>(A3, B3_1_48, B3_bias, C3_1_96, C3_bias, SkipLayer3_1_112, LeakyReLU<float>),

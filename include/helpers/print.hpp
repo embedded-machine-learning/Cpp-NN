@@ -7,6 +7,7 @@
 #include <tuple>
 
 #include <cstdio>
+#include <type_traits>
 
 #include "../Matrix.hpp"
 #include "../MatrixOperations.hpp"
@@ -66,6 +67,19 @@ std::basic_ostream<Ch, Tr> &operator<<(std::basic_ostream<Ch, Tr> &os, const Mat
     return os;
 }
 
+template<typename T>
+void printValue(const T &value) {
+    if constexpr (std::is_floating_point_v<T>) {
+        printf("%8.1e, ", static_cast<float>(value)); // Print each element with 4 decimal places
+    } else if constexpr (std::is_integral_v<T>) {
+        printf("%8ld, ", static_cast<long>(value)); // Print each element with 4 decimal places
+    } else if constexpr (std::is_same_v<Complex<float>,T>) {
+        printf("%8.1e+%8.1ei, ", static_cast<float>(value.real()), static_cast<float>(value.imag())); // Print each element with 4 decimal places
+    } else {
+        printf("%8.1e, ", static_cast<float>(value)); // just try to print it as float
+    }
+}
+
 template <IsMatrixType MatrixType>
     requires(MatrixType::number_of_dimensions == 2)
 void print2DMatrix_(const MatrixType &matrix) {
@@ -82,13 +96,7 @@ void print2DMatrix_(const MatrixType &matrix) {
         default: std::cout << "   "; break;                       // Other rows
         }
         for (Dim_size_t j = 0; j < matrix.dimensions[1]; ++j) {
-            if constexpr (std::is_floating_point_v<typename MatrixType::value_type>) {
-                printf("%8.1e, ", static_cast<float>(matrix.at(i, j))); // Print each element with 4 decimal places
-            } else if constexpr (std::is_integral_v<typename MatrixType::value_type>) {
-                printf("%8ld, ", static_cast<long>(matrix.at(i, j))); // Print each element with 4 decimal places
-            } else {
-                printf("%8.1e, ", static_cast<float>(matrix.at(i, j))); // just try to print it as float
-            }
+            printValue(matrix.at(i, j));
         }
         std::cout << "\b\b\n";
     }
@@ -121,7 +129,16 @@ void printNDMatrix_(const MatrixType &matrix) {
 }
 
 template <IsMatrixType MatrixType>
-    requires(MatrixType::number_of_dimensions >= 2)
+    requires(MatrixType::number_of_dimensions == 1)
+void printNDMatrix_(const MatrixType &matrix) {
+    for (Dim_size_t i = 0; i < matrix.dimensions[0]; ++i) {
+        printValue(matrix.at(i));
+    }
+    std::cout << "\b\b\n";
+}
+
+template <IsMatrixType MatrixType>
+    requires(MatrixType::number_of_dimensions >= 1)
 void printNDMatrix(const MatrixType &matrix) {
     std::cout << "Matrix of type: " << human_readable_type<MatrixType> << "\n";
     std::cout << "Order: " << matrix.order << "\n";

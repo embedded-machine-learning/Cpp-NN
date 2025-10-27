@@ -134,13 +134,13 @@ with open("weights.inc", "w") as file:
 
     write_network_weights(weights_dict, step_scale, file, os.path.join(os.path.dirname(__file__),include_path, "include"))
 
-with open("network.hpp", "w") as file:
-    file.write('#pragma once\n')
-    file.write(f'#include "include/NeuralNetwork.hpp"\n')
-    file.write('#include "weights.inc"\n')
-    file.write('#include "weights_unrolled.inc"\n')
-    file.write('\n')
-    write_network(weights_dict, file,os.path.join(os.path.dirname(__file__),include_path, "include"), B_KP, C_KP, S_KP, W_KP)
+# with open("network.hpp", "w") as file:
+#     file.write('#pragma once\n')
+#     file.write(f'#include "include/NeuralNetwork.hpp"\n')
+#     file.write('#include "weights.inc"\n')
+#     file.write('#include "weights_unrolled.inc"\n')
+#     file.write('\n')
+#     write_network(weights_dict, file,os.path.join(os.path.dirname(__file__),include_path, "include"), B_KP, C_KP, S_KP, W_KP)
 
 total_number_of_weights = 0
 for index,_ in enumerate(weights_dict):
@@ -150,11 +150,11 @@ for index,_ in enumerate(weights_dict):
 
 print(f"Total number of weights: {total_number_of_weights}")
 
-# %% Compile the unrolling script
-if os.path.exists("weight_unrolling_exec.out"):
-    os.remove("weight_unrolling_exec.out")
-subprocess.run(f"{compiler} {' '.join(clang_flags)} -I {include_path} unroll_weights.cpp -o {current_pos}/weight_unrolling_exec.out", shell=True,executable="/bin/bash", stderr=subprocess.STDOUT)
-subprocess.run(f"./weight_unrolling_exec.out", shell=True,executable="/bin/bash", stderr=subprocess.STDOUT)
+# # %% Compile the unrolling script
+# if os.path.exists("weight_unrolling_exec.out"):
+#     os.remove("weight_unrolling_exec.out")
+# subprocess.run(f"{compiler} {' '.join(clang_flags)} -I {include_path} unroll_weights.cpp -o {current_pos}/weight_unrolling_exec.out", shell=True,executable="/bin/bash", stderr=subprocess.STDOUT)
+# subprocess.run(f"./weight_unrolling_exec.out", shell=True,executable="/bin/bash", stderr=subprocess.STDOUT)
 
 
 #%% Compile the Network

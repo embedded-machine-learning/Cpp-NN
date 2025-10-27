@@ -59,6 +59,7 @@ struct DimensionOrder {
     consteval type operator[](std::size_t index) const noexcept {
         return order[index];
     }
+
     consteval DimensionOrder range(std::size_t index_start, std::size_t index_stop) const noexcept {
         DimensionOrder result = DimensionOrder("");
         for (std::size_t i = index_start; i < index_stop && i < max_length; i++) {
@@ -191,8 +192,8 @@ struct DimensionOrder {
                 throw std::range_error("Combined dimension order exceeds maximum length");
             }
 #endif
-            std::size_t index = 0;
-            DimensionOrder ref = result;
+            std::size_t    index = 0;
+            DimensionOrder ref   = result;
             for (std::size_t i = 0; i < max_length; i++) {
                 result.order[i] = ref[index];
                 index++;
@@ -254,6 +255,15 @@ struct DimensionOrder {
             }
         }
         return result;
+    }
+
+    consteval bool operator==(const DimensionOrder &other) noexcept {
+        for (std::size_t i = 0; i < max_length; i++) {
+            if (order[i] != other.order[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 };
 
@@ -416,6 +426,13 @@ struct SplitMatrixType;
 template <IsMatrixType BaseMatrixType, DimensionOrder Old, DimensionOrder New, typename VariadicIndices, typename VariadicIndicesM1, typename VariadicOriginalIndices, typename VariadicOldIndices>
     requires(New.length() == 1 && std::remove_cvref_t<BaseMatrixType>::order.containsAll(Old) && !std::remove_cvref_t<BaseMatrixType>::order.remove(Old).containsAny(New) && New.unique())
 struct CollaplsedMatrixType;
+
+template <typename Is, IsMatrixType... BaseMatrixType>
+    requires(((std::tuple_element_t<0, std::tuple<BaseMatrixType...>>::number_of_dimensions == BaseMatrixType::number_of_dimensions) && ...) // All matrices must have the same number of dimensions
+             && ((std::tuple_element_t<0, std::tuple<BaseMatrixType...>>::order == BaseMatrixType::order) && ...)                            // All matrices must have the same dimension order
+             && ((std::tuple_element_t<0, std::tuple<BaseMatrixType...>>::dimensions == BaseMatrixType::dimensions) && ...)                  // All matrices must have the same dimensions
+             )
+struct FuzedMatrixType;
 
 // Matrix definitions
 template <typename DataType,
@@ -1163,6 +1180,59 @@ struct ReferencedMatrixType {
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length())
     __attribute__((always_inline)) constexpr inline value_type at(DimTypes... dim) const {
         return data.template at<InterpretedDimensionOrder>(dim...);
+    }
+};
+
+template <std::size_t... Is, IsMatrixType... BaseMatrixType>
+    requires(((std::tuple_element_t<0, std::tuple<BaseMatrixType...>>::number_of_dimensions == BaseMatrixType::number_of_dimensions) && ...) // All matrices must have the same number of dimensions
+             && ((std::tuple_element_t<0, std::tuple<BaseMatrixType...>>::order == BaseMatrixType::order) && ...)                            // All matrices must have the same dimension order
+             && ((std::tuple_element_t<0, std::tuple<BaseMatrixType...>>::dimensions == BaseMatrixType::dimensions) && ...)                  // All matrices must have the same dimensions
+             )
+struct FuzedMatrixType<std::index_sequence<Is...>, BaseMatrixType...> {
+    using value_type                                                                   = std::tuple<std::add_lvalue_reference_t<typename BaseMatrixType::value_type>...>;
+    using BaseType0NoRef                                                               = std::remove_cvref_t<std::tuple_element_t<0, std::tuple<BaseMatrixType...>>>;
+    static constexpr std::size_t                                  number_of_dimensions = BaseType0NoRef::number_of_dimensions;
+    static constexpr DimensionOrder                               order                = BaseType0NoRef::order;
+    static constexpr std::array<Dim_size_t, number_of_dimensions> dimensions           = BaseType0NoRef::dimensions;
+    static constexpr bool                                         k_has_zero_dimension = BaseType0NoRef::k_has_zero_dimension;
+
+    static_assert(order.length() == number_of_dimensions, "Dimension order length must match number of dimensions");
+    template <typename Type>
+    using conditional_dereference = std::conditional_t<std::is_rvalue_reference_v<Type>, std::remove_reference_t<Type>, std::add_lvalue_reference_t<std::remove_reference_t<Type>>>;
+
+    using storage_type = std::tuple<conditional_dereference<BaseMatrixType>...>;
+
+    storage_type data;
+
+    FuzedMatrixType(reference_or_rvalue<BaseMatrixType>... ref) : data(ref...) {
+    }
+
+    constexpr FuzedMatrixType(const_reference_or_rvalue<BaseMatrixType>... ref) : data(ref...) {
+    }
+
+    template <IsIndexType... DimTypes>
+        requires(sizeof...(DimTypes) == number_of_dimensions)
+    __attribute__((always_inline)) inline auto&& at(DimTypes... dim)
+    {
+        return std::tie(std::get<Is>(data).at(dim...)...);
+    }
+
+    template <IsIndexType... DimTypes>
+        requires(sizeof...(DimTypes) == number_of_dimensions)
+    __attribute__((always_inline)) constexpr inline auto&& at(DimTypes... dim) const {
+        return std::tie(std::get<Is>(data).at(dim...)...);
+    }
+
+    template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
+        requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length())
+    __attribute__((always_inline)) inline auto&& at(DimTypes... dim) {
+        return  std::tie(std::get<Is>(data).template at<InterpretedDimensionOrder>(dim...)...);
+    }
+
+    template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
+        requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length())
+    __attribute__((always_inline)) constexpr inline auto&& at(DimTypes... dim) const {
+        return  std::tie(std::get<Is>(data).template at<InterpretedDimensionOrder>(dim...)...);
     }
 };
 

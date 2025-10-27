@@ -56,6 +56,14 @@ class Complex {
         return *this;
     }
 
+    __attribute__((always_inline)) inline Complex<T> &operator*=(const Complex<T> &other) {
+        T real_part = _data[0] * other._data[0] - _data[1] * other._data[1];
+        T imag_part = _data[0] * other._data[1] + _data[1] * other._data[0];
+        _data[0]     = real_part;
+        _data[1]     = imag_part;
+        return *this;
+    }
+
     __attribute__((always_inline)) inline bool operator==(const Complex<T> &other) const {
         return (_data[0] == other._data[0]) && (_data[1] == other._data[1]);
     }

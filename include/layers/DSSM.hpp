@@ -1,5 +1,6 @@
 #pragma once
 
+#include <semaphore>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -10,24 +11,39 @@
 
 #include "BaseLayer.hpp"
 
+#include "../helpers/print.hpp"
+
 namespace layers {
 
-template <typename OutputType                       = float,
-          typename StateType                        = Complex<float>,
-          std::size_t  SuggestedSubBatchSizeComplex = 1,
-          std::size_t  SuggestedSubBatchSizeReal    = 1,
-          bool         IgnoreSkipConnectionValue    = false,
-          IsMatrixType AMatrixType                  = Matrix<Complex<float>, "C", 1>,
-          typename BMatrixType                      = Matrix<Complex<float>, "IO", 1, 1>,
-          IsMatrixType BBiasMatrixType              = Matrix<Complex<float>, "C", 1>,
-          typename CMatrixType                      = Matrix<Complex<float>, "IO", 1, 1>,
-          IsMatrixType CBiasMatrixType              = Matrix<float, "C", 1>,
-          IsMatrixType DMatrixType                  = Matrix<float, "IO", 0, 0>, // if the matrix is empty, it will not be used
-          typename SkipMatrixType                   = Matrix<float, "IO", 1, 1>, // Trainable skip connection, either a matrix "IO" a vector "C" or a scalar "E"
-          typename Lambda                           = decltype([]() {}),
+template <typename OutputType                                            = float,
+          typename StateType                                             = Complex<float>,
+          std::size_t SuggestedSubBatchSizeComplex                       = 1,
+          std::size_t SuggestedSubBatchSizeReal                          = 1,
+          bool        IgnoreSkipConnectionValue                          = false,
+          template <typename, typename, typename> class BMACOperator_    = DefaultMACOperation,
+          template <typename, typename, typename> class CMACOperator_    = RealResultMACOperation,
+          template <typename, typename, typename> class DMACOperator_    = DefaultMACOperation,
+          template <typename, typename, typename> class SkipMACOperator_ = DefaultMACOperation,
+          IsMatrixType AMatrixType                                       = Matrix<Complex<float>, "C", 1>,
+          typename BMatrixType                                           = Matrix<Complex<float>, "IO", 1, 1>,
+          IsMatrixType BBiasMatrixType                                   = Matrix<Complex<float>, "C", 1>,
+          typename CMatrixType                                           = Matrix<Complex<float>, "IO", 1, 1>,
+          IsMatrixType CBiasMatrixType                                   = Matrix<float, "C", 1>,
+          IsMatrixType DMatrixType                                       = Matrix<float, "IO", 0, 0>, // if the matrix is empty, it will not be used
+          typename SkipMatrixType                                        = Matrix<float, "IO", 1, 1>, // Trainable skip connection, either a matrix "IO" a vector "C" or a scalar "E"
+          typename Lambda                                                = decltype([]() {}),
           IsMatrixType... ActivationMatrixInformation>
 class DSSMLayer {
   public:
+    // template <typename InputType, typename WeightType, typename BiasType>
+    // using BMACOperator_ = DefaultMACOperation<InputType, WeightType, BiasType>;
+    // template <typename InputType, typename WeightType, typename BiasType>
+    // using CMACOperator_ = RealResultMACOperation<InputType, WeightType, BiasType>;
+    // template<typename InputType, typename WeightType, typename BiasType>
+    // using DMACOperator_ = DefaultMACOperation<InputType, WeightType, BiasType>;
+    // template<typename InputType, typename WeightType, typename BiasType>
+    // using SkipMACOperator_ = DefaultMACOperation<InputType, WeightType, BiasType>;
+
     using AMatrixType_     = std::remove_cvref_t<AMatrixType>;
     using BMatrixType_     = std::remove_cvref_t<BMatrixType>;
     using BBiasMatrixType_ = std::remove_cvref_t<BBiasMatrixType>;
@@ -51,23 +67,23 @@ class DSSMLayer {
     using DMatrixCollapsed    = typename functions::linear::InverseWeightSubBioMatrixType<DMatrixType_>;
     using SkipMatrixCollapsed = typename functions::linear::InverseWeightSubBioMatrixType<SkipMatrixType_>;
 
-    static_assert(BMatrixCollapsed::order.remove("IO").length() == 0, "Collapsed B Matrix may only contain the orders IO");
+    static_assert(BMatrixCollapsed::order.remove("IOE").length() == 0, "Collapsed B Matrix may only contain the orders IOE");
     static_assert(CMatrixCollapsed::order.remove("IO").length() == 0, "Collapsed C Matrix may only contain the orders IO");
     static_assert(DMatrixCollapsed::order.remove("IO").length() == 0, "Collapsed D Matrix may only contain the orders IO");
     static_assert(SkipMatrixCollapsed::order.remove("IOCE").length() == 0, "Collapsed Skip Matrix may only contain the orders IO, C or E");
     static_assert(((int)SkipMatrixCollapsed::order.containsAny("IO") + (int)SkipMatrixCollapsed::order.containsAny("C") + (int)SkipMatrixCollapsed::order.containsAny("E")) == 1,
                   "Collapsed Skip Matrix may only contain the orders IO, C or E");
-    static_assert(BBiasMatrixType_::order.remove("EC").length() == 0, "BBiasMatrixType must be in the order of 'C' (Channel) or 'E' (Element)");
+    static_assert(BBiasMatrixType_::order.remove("EC").length() == 0, "BBiasMatrixType must be in the order of 'C' (Channel) or 'E' (Element/Empty)");
     static_assert(CBiasMatrixType_::order.remove("EC").length() == 0, "CBiasMatrixType must be in the order of 'C' (Channel) or 'E' (Element)");
     static_assert(AMatrixType_::order.remove("C").length() == 0, "AMatrixType must be in the order of 'C' (Channel) only");
 
-    constexpr static Dim_size_t input_channels        = BMatrixCollapsed::dimensions[BMatrixCollapsed::order.indexOf('I')];
-    constexpr static Dim_size_t hidden_channels       = BMatrixCollapsed::dimensions[BMatrixCollapsed::order.indexOf('O')];
-    constexpr static Dim_size_t hidden_channels_cmp   = AMatrixType_::dimensions[AMatrixType_::order.indexOf('C')];
+    constexpr static Dim_size_t input_channels        = (BMatrixCollapsed::order.contains('I') ? BMatrixCollapsed::dimensions[BMatrixCollapsed::order.indexOf('I')] : 1);
+    constexpr static Dim_size_t hidden_channels       = AMatrixType_::dimensions[AMatrixType_::order.indexOf('C')];
+    constexpr static Dim_size_t hidden_channels_cmp   = (BMatrixCollapsed::order.contains('O') ? BMatrixCollapsed::dimensions[BMatrixCollapsed::order.indexOf('O')] : 1);
     constexpr static Dim_size_t hidden_channels_cmp_2 = CMatrixCollapsed::dimensions[CMatrixCollapsed::order.indexOf('I')];
     constexpr static Dim_size_t output_channels       = CMatrixCollapsed::dimensions[CMatrixCollapsed::order.indexOf('O')];
 
-    static_assert(hidden_channels == hidden_channels_cmp, "Input channels must match hidden channels in AMatrixType");
+    static_assert(BMatrixCollapsed::order.containsOnly("E") || hidden_channels == hidden_channels_cmp, "Input channels must match hidden channels in AMatrixType");
     static_assert(hidden_channels == hidden_channels_cmp_2, "Hidden channels must match hidden channels in CMatrixType");
 
     template <IsMatrixType InputMatrix>
@@ -179,7 +195,7 @@ class DSSMLayer {
             // auto       xt_m1          = concatenate<1>(state_permuted, slice<"S", sequence_length - 1>(bu_permuted, {0})); // x[t-1] // needs a number
 
             // BU = B@u + BBias
-            functions::linear::Linear<SuggestedSubBatchSizeComplex, DefaultMACOperation>(input_collapsed, bu_collapsed, bmatrix_, bbias_, [](const auto &x) { return x; });
+            functions::linear::Linear<SuggestedSubBatchSizeComplex, BMACOperator_>(input_collapsed, bu_collapsed, bmatrix_, bbias_, [](const auto &x) { return x; });
 
             // x[t] = A*x[t-1] + BU[t]
             loopUnrolled([](auto &x_t, const auto a, const auto x_t_m1) { x_t += a * x_t_m1; }, slice<"S", 1>(bu_permuted, {0}), a_broadcasted, state_permuted); // copy last state to state
@@ -196,29 +212,41 @@ class DSSMLayer {
                 return;
             }
             // y = Act(R(C@x + CBias)) (+ D@x)
-            functions::linear::Linear<SuggestedSubBatchSizeComplex, RealResultMACOperation>(
+            functions::linear::Linear<SuggestedSubBatchSizeComplex, CMACOperator_>(
                     bu_collapsed, output_collapsed, cmatrix_, cbias_, [&](const auto &x, const auto... vals) { return act_(x, vals...); }, std::get<I>(activation_parameters_)...);
         } else {
             // Single Sequence
             const auto a_broadcasted = permute<"BC">(broadcast<"B", {batch_size}>(amatrix_)); // A is broadcasted over the sequence dimension
-            // May use fused activation function, as the order of the sequence is consistent as it is a single sequence
-            // x[t] = A*x[t-1] + BU + BBias
-            functions::linear::Linear<SuggestedSubBatchSizeComplex, DefaultMACOperation>(
-                    input_collapsed, state, bmatrix_, bbias_, [](const auto bu, const auto x, const auto a) { return a*x + bu; }, state, a_broadcasted);
+            if constexpr (input_channels == 1 && BMatrixCollapsed::order.containsOnly("E") && BBiasMatrixType_::order.containsOnly("E")) {
+                // Special case optimization, when input channels is 1 and B matrix is E for empty and BBias is empty
+                // x[t] = A*x[t-1] + B*U + BBias -> x[t] = A*x[t-1] + u
+                const auto input_expanded = replicate<"C", {hidden_channels}>(input_collapsed); // replicate input channels to match hidden channels
+                // Datatypes should be Complex, Complex, Real,
+                loop([](auto &x_t, const auto a, const auto u) { x_t += a * x_t + u; }, state, a_broadcasted, input_expanded);
+            } else 
+            {
+                // May use fused activation function, as the order of the sequence is consistent as it is a single sequence
+                // x[t] = A*x[t-1] + BU + BBias
+                functions::linear::Linear<SuggestedSubBatchSizeComplex, BMACOperator_>(
+                        input_collapsed, state, bmatrix_, bbias_, [](const auto bu, const auto x, const auto a) { return a * x + bu; }, state, a_broadcasted);
+            }
             if constexpr (!ContinueAfter) {
                 // If we do not continue after this layer, we can just return here
                 return;
             }
             // y = Act(R(C@x + CBias))
-            functions::linear::Linear<SuggestedSubBatchSizeComplex, RealResultMACOperation>(
+            functions::linear::Linear<SuggestedSubBatchSizeComplex, CMACOperator_>(
                     state, output_collapsed, cmatrix_, cbias_, [&](const auto &x, const auto... vals) { return act_(x, vals...); }, std::get<I>(activation_parameters_)...);
         }
         // Handle the skip connection
         if constexpr (skip_connection_used && full_skip_connection_enabled) {
             // out = SkipConnection@u + y
-            functions::linear::Linear<SuggestedSubBatchSizeReal, DefaultMACOperation>(input_collapsed, output_collapsed, skip_matrix_, output_collapsed, [](const auto &x) { return x; });
+            functions::linear::Linear<SuggestedSubBatchSizeReal, SkipMACOperator_>(input_collapsed, output_collapsed, skip_matrix_, output_collapsed, [](const auto &x) { return x; });
+
         } else if constexpr (skip_connection_used && elementwise_skip_connection_enabled) {
             static_assert(input_channels == 1 || input_channels == output_channels, "Elementwise skip connection requires input channels to be 1 or equal to output channels, This is cursed");
+            static_assert(std::is_same_v<SkipMACOperator_<float, float, float>, DefaultMACOperation<float, float, float>>,
+                          "Elementwise skip connection requires DefaultMACOperation, if you've specialized it, please implement elementwise multiplication");
             // out = y + SkipConnection*u
             const auto skip_broadcast = conditionalBroadcast<"B", {batch_size * sequence_length}>(conditionalReplace<"E", "C">(conditionalReplicate<"E", {output_channels}>(skip_matrix_)));
             if constexpr (input_channels == 1) {
@@ -248,18 +276,22 @@ class DSSMLayer {
 
 static_assert(IsValidLayer<DSSMLayer<>>, "SSM must be a valid layer type");
 
-template <typename OutputType                       = float,
-          typename StateType                        = Complex<float>,
-          std::size_t  SuggestedSubBatchSizeComplex = 1,
-          std::size_t  SuggestedSubBatchSizeReal    = 1,
-          IsMatrixType AMatrixType                  = Matrix<Complex<float>, "C", 1>,
-          typename BMatrixType                      = Matrix<Complex<float>, "IO", 1, 1>,
-          IsMatrixType BBiasMatrixType              = Matrix<Complex<float>, "C", 1>,
-          typename CMatrixType                      = Matrix<Complex<float>, "IO", 1, 1>,
-          IsMatrixType CBiasMatrixType              = Matrix<float, "C", 1>,
-          IsMatrixType DMatrixType                  = Matrix<float, "IO", 0, 0>, // if the matrix is empty, it will not be used
-          typename SkipMatrixType                   = Matrix<float, "IO", 1, 1>, // Trainable skip connection, either a matrix "IO" a vector "C" or a scalar "E"
-          typename Lambda                           = decltype([]() {}),
+template <typename OutputType                                            = float,
+          typename StateType                                             = Complex<float>,
+          std::size_t SuggestedSubBatchSizeComplex                       = 1,
+          std::size_t SuggestedSubBatchSizeReal                          = 1,
+          template <typename, typename, typename> class BMACOperator_    = DefaultMACOperation,
+          template <typename, typename, typename> class CMACOperator_    = RealResultMACOperation,
+          template <typename, typename, typename> class DMACOperator_    = DefaultMACOperation,
+          template <typename, typename, typename> class SkipMACOperator_ = DefaultMACOperation,
+          IsMatrixType AMatrixType                                       = Matrix<Complex<float>, "C", 1>,
+          typename BMatrixType                                           = Matrix<Complex<float>, "IO", 1, 1>,
+          IsMatrixType BBiasMatrixType                                   = Matrix<Complex<float>, "C", 1>,
+          typename CMatrixType                                           = Matrix<Complex<float>, "IO", 1, 1>,
+          IsMatrixType CBiasMatrixType                                   = Matrix<float, "C", 1>,
+          IsMatrixType DMatrixType                                       = Matrix<float, "IO", 0, 0>, // if the matrix is empty, it will not be used
+          typename SkipMatrixType                                        = Matrix<float, "IO", 1, 1>, // Trainable skip connection, either a matrix "IO" a vector "C" or a scalar "E"
+          typename Lambda                                                = decltype([]() {}),
           IsMatrixType... ActivationMatrixInformation>
 __attribute__((always_inline)) inline constexpr auto DSSM(AMatrixType     &&AMatrix,
                                                           BMatrixType     &&BMatrix,
@@ -270,23 +302,27 @@ __attribute__((always_inline)) inline constexpr auto DSSM(AMatrixType     &&AMat
                                                           SkipMatrixType  &&SkipMatrix,
                                                           Lambda          &&Act,
                                                           ActivationMatrixInformation &...ActivationParameters) noexcept {
-    return DSSMLayer<OutputType, StateType, SuggestedSubBatchSizeComplex, SuggestedSubBatchSizeReal, false, AMatrixType, BMatrixType, BBiasMatrixType, CMatrixType, CBiasMatrixType, DMatrixType,
-                     SkipMatrixType, Lambda, ActivationMatrixInformation...>(
+    return DSSMLayer<OutputType, StateType, SuggestedSubBatchSizeComplex, SuggestedSubBatchSizeReal, false, BMACOperator_, CMACOperator_, DMACOperator_, SkipMACOperator_, AMatrixType, BMatrixType,
+                     BBiasMatrixType, CMatrixType, CBiasMatrixType, DMatrixType, SkipMatrixType, Lambda, ActivationMatrixInformation...>(
             std::forward<AMatrixType>(AMatrix), std::forward<BMatrixType>(BMatrix), std::forward<BBiasMatrixType>(BBias), std::forward<CMatrixType>(CMatrix), std::forward<CBiasMatrixType>(CBias),
             std::forward<DMatrixType>(DMatrix), std::forward<SkipMatrixType>(SkipMatrix), std::forward<Lambda>(Act), std::forward<ActivationMatrixInformation>(ActivationParameters)...);
 }
 
-template <typename OutputType                       = float,
-          typename StateType                        = Complex<float>,
-          std::size_t  SuggestedSubBatchSizeComplex = 1,
-          std::size_t  SuggestedSubBatchSizeReal    = 1,
-          IsMatrixType AMatrixType                  = Matrix<Complex<float>, "C", 1>,
-          typename BMatrixType                      = Matrix<Complex<float>, "IO", 1, 1>,
-          IsMatrixType BBiasMatrixType              = Matrix<Complex<float>, "C", 1>,
-          typename CMatrixType                      = Matrix<Complex<float>, "IO", 1, 1>,
-          IsMatrixType CBiasMatrixType              = Matrix<float, "C", 1>,
-          typename SkipMatrixType                   = Matrix<float, "IO", 1, 1>, // Trainable skip connection, either a matrix "IO" a vector "C" or a scalar "E"
-          typename Lambda                           = decltype([]() {}),
+template <typename OutputType                                            = float,
+          typename StateType                                             = Complex<float>,
+          std::size_t SuggestedSubBatchSizeComplex                       = 1,
+          std::size_t SuggestedSubBatchSizeReal                          = 1,
+          template <typename, typename, typename> class BMACOperator_    = DefaultMACOperation,
+          template <typename, typename, typename> class CMACOperator_    = RealResultMACOperation,
+          template <typename, typename, typename> class DMACOperator_    = NonMACOperation,
+          template <typename, typename, typename> class SkipMACOperator_ = DefaultMACOperation,
+          IsMatrixType AMatrixType                                       = Matrix<Complex<float>, "C", 1>,
+          typename BMatrixType                                           = Matrix<Complex<float>, "IO", 1, 1>,
+          IsMatrixType BBiasMatrixType                                   = Matrix<Complex<float>, "C", 1>,
+          typename CMatrixType                                           = Matrix<Complex<float>, "IO", 1, 1>,
+          IsMatrixType CBiasMatrixType                                   = Matrix<float, "C", 1>,
+          typename SkipMatrixType                                        = Matrix<float, "IO", 1, 1>, // Trainable skip connection, either a matrix "IO" a vector "C" or a scalar "E"
+          typename Lambda                                                = decltype([]() {}),
           IsMatrixType... ActivationMatrixInformation>
 __attribute__((always_inline)) inline constexpr auto Sedge(AMatrixType     &&AMatrix,
                                                            BMatrixType     &&BMatrix,
@@ -296,22 +332,56 @@ __attribute__((always_inline)) inline constexpr auto Sedge(AMatrixType     &&AMa
                                                            SkipMatrixType  &&SkipMatrix,
                                                            Lambda          &&Act,
                                                            ActivationMatrixInformation &...ActivationParameters) noexcept {
-    return DSSMLayer<OutputType, StateType, SuggestedSubBatchSizeComplex, SuggestedSubBatchSizeReal, true, AMatrixType, BMatrixType, BBiasMatrixType, CMatrixType, CBiasMatrixType,
-                     Matrix<OutputType, "IO", 0, 0>, SkipMatrixType, Lambda, ActivationMatrixInformation...>(
+    return DSSMLayer<OutputType, StateType, SuggestedSubBatchSizeComplex, SuggestedSubBatchSizeReal, true, BMACOperator_, CMACOperator_, DMACOperator_, SkipMACOperator_, AMatrixType, BMatrixType,
+                     BBiasMatrixType, CMatrixType, CBiasMatrixType, Matrix<OutputType, "IO", 0, 0>, SkipMatrixType, Lambda, ActivationMatrixInformation...>(
             std::forward<AMatrixType>(AMatrix), std::forward<BMatrixType>(BMatrix), std::forward<BBiasMatrixType>(BBias), std::forward<CMatrixType>(CMatrix), std::forward<CBiasMatrixType>(CBias),
             Matrix<OutputType, "IO", 0, 0>(), std::forward<SkipMatrixType>(SkipMatrix), std::forward<Lambda>(Act), std::forward<ActivationMatrixInformation>(ActivationParameters)...);
 }
 
-template <typename OutputType                       = float,
-          typename StateType                        = Complex<float>,
-          std::size_t  SuggestedSubBatchSizeComplex = 1,
-          std::size_t  SuggestedSubBatchSizeReal    = 1,
-          IsMatrixType AMatrixType                  = Matrix<Complex<float>, "C", 1>,
-          typename BMatrixType                      = Matrix<Complex<float>, "IO", 1, 1>,
-          IsMatrixType BBiasMatrixType              = Matrix<Complex<float>, "C", 1>,
-          typename CMatrixType                      = Matrix<Complex<float>, "IO", 1, 1>,
-          IsMatrixType CBiasMatrixType              = Matrix<float, "C", 1>,
-          typename Lambda                           = decltype([]() {}),
+template <typename OutputType                                            = float,
+          typename StateType                                             = Complex<float>,
+          std::size_t SuggestedSubBatchSizeComplex                       = 1,
+          std::size_t SuggestedSubBatchSizeReal                          = 1,
+          template <typename, typename, typename> class BMACOperator_    = NonMACOperation,
+          template <typename, typename, typename> class CMACOperator_    = RealResultMACOperation,
+          template <typename, typename, typename> class DMACOperator_    = NonMACOperation,
+          template <typename, typename, typename> class SkipMACOperator_ = DefaultMACOperation,
+          IsMatrixType AMatrixType                                       = Matrix<Complex<float>, "C", 1>,
+          typename BMatrixType                                           = Matrix<float, "E", 1>,
+          IsMatrixType BBiasMatrixType                                   = Matrix<float, "E", 1>,
+          typename CMatrixType                                           = Matrix<Complex<float>, "IO", 1, 1>,
+          IsMatrixType CBiasMatrixType                                   = Matrix<float, "C", 1>,
+          typename SkipMatrixType                                        = Matrix<float, "IO", 1, 1>, // Trainable skip connection, either a matrix "IO" a vector "C" or a scalar "E"
+          typename Lambda                                                = decltype([]() {}),
+          IsMatrixType... ActivationMatrixInformation>
+__attribute__((always_inline)) inline constexpr auto SedgeFirstLayerOp(AMatrixType &&AMatrix,
+                                                                       //    BMatrixType     &&BMatrix,
+                                                                       //    BBiasMatrixType &&BBias,
+                                                                       CMatrixType     &&CMatrix,
+                                                                       CBiasMatrixType &&CBias,
+                                                                       SkipMatrixType  &&SkipMatrix,
+                                                                       Lambda          &&Act,
+                                                                       ActivationMatrixInformation &...ActivationParameters) noexcept {
+    return DSSMLayer<OutputType, StateType, SuggestedSubBatchSizeComplex, SuggestedSubBatchSizeReal, true, BMACOperator_, CMACOperator_, DMACOperator_, SkipMACOperator_, AMatrixType, BMatrixType,
+                     BBiasMatrixType, CMatrixType, CBiasMatrixType, Matrix<OutputType, "IO", 0, 0>, SkipMatrixType, Lambda, ActivationMatrixInformation...>(
+            std::forward<AMatrixType>(AMatrix), Matrix<float, "E", 1>{}, Matrix<float, "E", 1>{}, std::forward<CMatrixType>(CMatrix), std::forward<CBiasMatrixType>(CBias),
+            Matrix<OutputType, "IO", 0, 0>(), std::forward<SkipMatrixType>(SkipMatrix), std::forward<Lambda>(Act), std::forward<ActivationMatrixInformation>(ActivationParameters)...);
+}
+
+template <typename OutputType                                            = float,
+          typename StateType                                             = Complex<float>,
+          std::size_t SuggestedSubBatchSizeComplex                       = 1,
+          std::size_t SuggestedSubBatchSizeReal                          = 1,
+          template <typename, typename, typename> class BMACOperator_    = DefaultMACOperation,
+          template <typename, typename, typename> class CMACOperator_    = RealResultMACOperation,
+          template <typename, typename, typename> class DMACOperator_    = NonMACOperation,
+          template <typename, typename, typename> class SkipMACOperator_ = NonMACOperation,
+          IsMatrixType AMatrixType                                       = Matrix<Complex<float>, "C", 1>,
+          typename BMatrixType                                           = Matrix<Complex<float>, "IO", 1, 1>,
+          IsMatrixType BBiasMatrixType                                   = Matrix<Complex<float>, "C", 1>,
+          typename CMatrixType                                           = Matrix<Complex<float>, "IO", 1, 1>,
+          IsMatrixType CBiasMatrixType                                   = Matrix<float, "C", 1>,
+          typename Lambda                                                = decltype([]() {}),
           IsMatrixType... ActivationMatrixInformation>
 __attribute__((always_inline)) inline constexpr auto SSMPiano(AMatrixType     &&AMatrix,
                                                               BMatrixType     &&BMatrix,
@@ -320,8 +390,8 @@ __attribute__((always_inline)) inline constexpr auto SSMPiano(AMatrixType     &&
                                                               CBiasMatrixType &&CBias,
                                                               Lambda          &&Act,
                                                               ActivationMatrixInformation &...ActivationParameters) noexcept {
-    return DSSMLayer<OutputType, StateType, SuggestedSubBatchSizeComplex, SuggestedSubBatchSizeReal, false, AMatrixType, BMatrixType, BBiasMatrixType, CMatrixType, CBiasMatrixType,
-                     Matrix<OutputType, "IO", 0, 0>, Matrix<OutputType, "IO", 0, 0>, Lambda, ActivationMatrixInformation...>(
+    return DSSMLayer<OutputType, StateType, SuggestedSubBatchSizeComplex, SuggestedSubBatchSizeReal, false, BMACOperator_, CMACOperator_, DMACOperator_, SkipMACOperator_, AMatrixType, BMatrixType,
+                     BBiasMatrixType, CMatrixType, CBiasMatrixType, Matrix<OutputType, "IO", 0, 0>, Matrix<OutputType, "IO", 0, 0>, Lambda, ActivationMatrixInformation...>(
             std::forward<AMatrixType>(AMatrix), std::forward<BMatrixType>(BMatrix), std::forward<BBiasMatrixType>(BBias), std::forward<CMatrixType>(CMatrix), std::forward<CBiasMatrixType>(CBias),
             Matrix<OutputType, "IO", 0, 0>(), Matrix<OutputType, "IO", 0, 0>(), std::forward<Lambda>(Act), std::forward<ActivationMatrixInformation>(ActivationParameters)...);
 }
