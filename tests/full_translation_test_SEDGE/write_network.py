@@ -32,9 +32,17 @@ def write_network_weights(weights_dict, step_scale, file, Cpp_NN_include_path):
         if 'SkipLayer' in weights_dict[index].keys():
             SkipLayer = weights_dict[index]['SkipLayer']
             if SkipLayer is not None:
-                if SkipLayer.dtype == np.complex64:
+                if SkipLayer.dtype in complex_types:
                     print("SkipLayer is complex, check if it should be")
                     SkipLayer = SkipLayer.real
+                if SkipLayer.dtype != np.float32:
+                    SkipLayer = SkipLayer.astype(np.float32)
+                write_weight(SkipLayer, f"SkipLayer{index}", 'OI', file)
+            else:
+                SkipLayer = np.ones((1), dtype=np.float32)
+                print("SkipLayer is None, using dummy matrix of ones")
+                write_weight(SkipLayer, f"SkipLayer{index}", 'E', file)
+                
                 write_weight(SkipLayer, f"SkipLayer{index}", 'OI', file)
             else:
                 SkipLayer = np.ones((1), dtype=np.float32)
