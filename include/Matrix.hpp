@@ -386,7 +386,7 @@ template <std::size_t ConcatenatedMatrixDimension = 0, //
           IsMatrixType... MatrixTypes>
     requires(((std::tuple_element_t<0, std::tuple<std::remove_cvref_t<MatrixTypes>...>>::order == std::remove_cvref_t<MatrixTypes>::order) && ...) &&
              (all_same<typename std::remove_cvref_t<MatrixTypes>::value_type...>))
-struct ConcatinadedMatrixType;
+struct ConcatenatedMatrixType;
 
 template <IsMatrixType                                 BaseMatrixType,
           DimensionOrder                               SlicedOrder,
@@ -431,7 +431,7 @@ struct SplitMatrixType;
 
 template <IsMatrixType BaseMatrixType, DimensionOrder Old, DimensionOrder New, typename VariadicIndices, typename VariadicIndicesM1, typename VariadicOriginalIndices, typename VariadicOldIndices>
     requires(New.length() == 1 && std::remove_cvref_t<BaseMatrixType>::order.containsAll(Old) && !std::remove_cvref_t<BaseMatrixType>::order.remove(Old).containsAny(New) && New.unique())
-struct CollaplsedMatrixType;
+struct CollapsedMatrixType;
 
 template <typename Is, IsMatrixType... BaseMatrixType>
     requires(((std::tuple_element_t<0, std::tuple<std::remove_cvref_t<BaseMatrixType>...>>::number_of_dimensions == std::remove_cvref_t<BaseMatrixType>::number_of_dimensions) &&
@@ -571,7 +571,7 @@ template <std::size_t ConcatenatedMatrixDimension, //
     requires(((variadicArrayCompare<DimensionOrder::type, DimensionOrder::max_length>(std::remove_cvref_t<MatrixTypes>::order.order...)[VariadicIndices] ||
                (VariadicIndices == ConcatenatedMatrixDimension)) &&
               ...))
-struct ConcatinadedMatrixType<ConcatenatedMatrixDimension, std::index_sequence<VariadicIndices...>, MatrixTypes...> {
+struct ConcatenatedMatrixType<ConcatenatedMatrixDimension, std::index_sequence<VariadicIndices...>, MatrixTypes...> {
 
     using value_type = typename std::tuple_element_t<0, std::tuple<std::remove_cvref_t<MatrixTypes>...>>::value_type; // Assuming all matrices have the same value type
     using element_0  = std::tuple_element_t<0, std::tuple<std::remove_cvref_t<MatrixTypes>...>>;                      // First matrix type for dimensions and offsets
@@ -590,10 +590,10 @@ struct ConcatinadedMatrixType<ConcatenatedMatrixDimension, std::index_sequence<V
 
     storage_type data;
 
-    ConcatinadedMatrixType(reference_or_rvalue<MatrixTypes>... values) : data(values...) {
+    ConcatenatedMatrixType(reference_or_rvalue<MatrixTypes>... values) : data(values...) {
     }
 
-    constexpr ConcatinadedMatrixType(const_reference_or_rvalue<MatrixTypes>... values) : data(values...) {
+    constexpr ConcatenatedMatrixType(const_reference_or_rvalue<MatrixTypes>... values) : data(values...) {
     }
 
     template <IsIndexType... DimTypes>
@@ -1061,7 +1061,7 @@ template <IsMatrixType   BaseMatrixType,
           std::size_t... VariadicIndicesM1,
           std::size_t... VariadicOriginalIndices,
           std::size_t... VariadicOldIndices>
-struct CollaplsedMatrixType<BaseMatrixType,
+struct CollapsedMatrixType<BaseMatrixType,
                             Old,
                             New,
                             std::index_sequence<VariadicIndices...>,
@@ -1095,10 +1095,10 @@ struct CollaplsedMatrixType<BaseMatrixType,
 
     storage_type data;
 
-    CollaplsedMatrixType(reference_or_rvalue<BaseMatrixType> ref) : data(ref) {
+    CollapsedMatrixType(reference_or_rvalue<BaseMatrixType> ref) : data(ref) {
     }
 
-    constexpr CollaplsedMatrixType(const_reference_or_rvalue<BaseMatrixType> ref) : data(ref) {
+    constexpr CollapsedMatrixType(const_reference_or_rvalue<BaseMatrixType> ref) : data(ref) {
     }
 
 #pragma clang diagnostic push
@@ -1316,7 +1316,7 @@ using PermutedMatrix = PermutedMatrixType<BaseMatrixType, LocalOrder, std::make_
 
 template <std::size_t ConcatinationDimension, IsMatrixType... BaseMatrixType>
 using ConcatenatedMatrix =
-        ConcatinadedMatrixType<ConcatinationDimension, std::make_index_sequence<std::tuple_element_t<0, std::tuple<std::remove_cvref_t<BaseMatrixType>...>>::number_of_dimensions>, BaseMatrixType...>;
+        ConcatenatedMatrixType<ConcatinationDimension, std::make_index_sequence<std::tuple_element_t<0, std::tuple<std::remove_cvref_t<BaseMatrixType>...>>::number_of_dimensions>, BaseMatrixType...>;
 
 template <IsMatrixType BaseMatrixType, DimensionOrder SlicedOrder, std::array<Dim_size_t, SlicedOrder.length()> Slices>
 using SlicedMatrix = SlicedMatrixType<BaseMatrixType,
@@ -1359,7 +1359,7 @@ using SplitMatrix = SplitMatrixType<BaseMatrixType,
                                     std::make_index_sequence<std::remove_cvref_t<BaseMatrixType>::number_of_dimensions - 1>>;
 
 template <IsMatrixType BaseMatrixType, DimensionOrder Old, DimensionOrder New>
-using CollapsedMatrix = CollaplsedMatrixType<BaseMatrixType,
+using CollapsedMatrix = CollapsedMatrixType<BaseMatrixType,
                                              Old,
                                              New,
                                              std::make_index_sequence<std::remove_cvref_t<BaseMatrixType>::number_of_dimensions - Old.length() + 1>,
@@ -1579,7 +1579,7 @@ auto I = split<"2", "34", 1, 2>(A); // Split the dimension "2" of matrix A into 
 auto J = collapse<"12", "Q">(A); // Collapse the dimensions "12" of matrix A into a single dimension "Q"
 // Negative of a matrix
 auto K = -A; // Negate the matrix A, this will return a NegativeMatrix
-auto L = fuze(A, B); // Fuse multiple matrices into a single matrix, the resulting matrix will have a tuple of values at each index
+auto L = fuse(A, B); // Fuse multiple matrices into a single matrix, the resulting matrix will have a tuple of values at each index
 
 
 ReferencedMatrixType<BaseMatrixType>    //Doesn't do anything, just used for conditional type changes

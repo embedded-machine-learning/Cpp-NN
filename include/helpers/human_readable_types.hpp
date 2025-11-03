@@ -71,7 +71,7 @@ constexpr auto human_readable_type<PermutedMatrixType<BaseMatrixType, LocalOrder
 template <std::size_t ConcatenatedMatrixDimension /*= 0*/, //
           typename VariadicIndcices               /*= std::index_sequence<>*/,
           IsMatrixType... MatrixTypes>
-constexpr auto human_readable_type<ConcatinadedMatrixType<ConcatenatedMatrixDimension, VariadicIndcices, MatrixTypes...>> =
+constexpr auto human_readable_type<ConcatenatedMatrixType<ConcatenatedMatrixDimension, VariadicIndcices, MatrixTypes...>> =
         concat(toArrayAuto("ConcatenatedMatrix<"), num_to_string<ConcatenatedMatrixDimension>, toArrayAuto(", "), concat(human_readable_type<MatrixTypes>, toArrayAuto(", "))..., toArrayAuto("\b\b>"));
 
 template <IsMatrixType                                 BaseMatrixType,
@@ -146,7 +146,7 @@ constexpr auto human_readable_type<SplitMatrixType<BaseMatrixType, Old, New, New
                toArrayAuto("}>"));
 
 template <IsMatrixType BaseMatrixType, DimensionOrder Old, DimensionOrder New, typename VariadicIndices, typename VariadicIndicesM1, typename VariadicOriginalIndices, typename VariadicOldIndices>
-constexpr auto human_readable_type<CollaplsedMatrixType<BaseMatrixType, Old, New, VariadicIndices, VariadicIndicesM1, VariadicOriginalIndices, VariadicOldIndices>> =
+constexpr auto human_readable_type<CollapsedMatrixType<BaseMatrixType, Old, New, VariadicIndices, VariadicIndicesM1, VariadicOriginalIndices, VariadicOldIndices>> =
         concat(toArrayAuto("CollapsedMatrix<"), human_readable_type<BaseMatrixType>, toArrayAuto(", \""), Old.order, toArrayAuto("\", \""), New.order, toArrayAuto("\">"));
 
 template <IsMatrixType BaseMatrixType>
