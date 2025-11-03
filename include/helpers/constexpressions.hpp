@@ -139,3 +139,6 @@ using reference_or_copy = std::conditional_t<std::is_rvalue_reference_v<T>, drop
 template<bool A, typename B>
 // using reference_or_rvalue_const_preserving = std::conditional_t<std::is_rvalue_reference_v<T>, std::add_rvalue_reference_t<drop_reference<T>>, std::add_lvalue_reference_t<drop_reference<T>>>;
 using conditional_const = std::conditional_t<A, std::add_const_t<B>, B>;
+
+template<typename T>
+using enforce_l_or_r_ref = std::conditional_t<std::is_lvalue_reference_v<T>, std::add_lvalue_reference_t<std::remove_reference_t<T>>, std::add_rvalue_reference_t<std::remove_reference_t<T>>>;

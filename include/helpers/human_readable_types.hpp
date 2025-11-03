@@ -1,6 +1,7 @@
 #pragma once
 #include <complex>
 #include <cstdint>
+#include <type_traits>
 
 #include "../Matrix.hpp"
 #include "../MatrixOperations.hpp"
@@ -14,12 +15,14 @@
 template <typename Type>
 constexpr auto human_readable_type = toArrayAuto("Unknown");
 template <typename Type>
+requires(std::is_lvalue_reference_v<Type&>)
 constexpr auto human_readable_type<Type &> = concat(human_readable_type<Type>, toArrayAuto("&"));
 template <typename Type>
 constexpr auto human_readable_type<const Type> = concat(toArrayAuto("const "), human_readable_type<Type>);
 template <typename Type>
 constexpr auto human_readable_type<Type *> = concat(human_readable_type<Type>, toArrayAuto("*"));
 template <typename Type>
+requires(std::is_rvalue_reference_v<Type&&>)
 constexpr auto human_readable_type<Type &&> = concat(human_readable_type<Type>, toArrayAuto("&&"));
 template <typename... Types>
 constexpr auto human_readable_type<std::tuple<Types...>> = concat(toArrayAuto("std::tuple<"), concat(human_readable_type<Types>, toArrayAuto(", "))..., toArrayAuto("\b\b>"));
@@ -148,3 +151,11 @@ constexpr auto human_readable_type<CollaplsedMatrixType<BaseMatrixType, Old, New
 
 template <IsMatrixType BaseMatrixType>
 constexpr auto human_readable_type<ReferencedMatrixType<BaseMatrixType>> = concat(toArrayAuto("ReferencedMatrix<"), human_readable_type<BaseMatrixType>, toArrayAuto(">"));
+
+template<IsMatrixType... BaseMatrixTypes>
+constexpr auto human_readable_type<FusedMatrix<BaseMatrixTypes...>> =
+        concat(toArrayAuto("FusedMatrix<"), concat(human_readable_type<BaseMatrixTypes>, toArrayAuto(", "))..., toArrayAuto("\b\b>"));
+
+template<std::size_t Is, IsFuzedMatrixType BaseFuzedMatrixType>
+constexpr auto human_readable_type<SelectFusedMatrixType<Is, BaseFuzedMatrixType>> =
+        concat(toArrayAuto("SelectFusedMatrix<"), num_to_string<Is>, toArrayAuto(", "), human_readable_type<BaseFuzedMatrixType>, toArrayAuto(">"));

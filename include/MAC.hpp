@@ -19,7 +19,8 @@ constexpr auto multily_accumulate<std::array<AccumulationType, 2>, InputType, Co
         };
 
 template <typename AccumulationType, typename InputType, typename WeightType>
-constexpr auto real_only_multily_accumulate = [](AccumulationType &acc, const InputType &input, const WeightType &weight) { acc += input.real() * weight.real() - input.imag() * weight.imag(); };
+constexpr auto real_only_multily_accumulate =
+        [](AccumulationType &acc, const InputType &input, const WeightType &weight) -> void { acc += input.real() * weight.real() - input.imag() * weight.imag(); };
 
 template <typename AccumulationType, typename InputType, typename WeightType>
 constexpr auto split_real_only_multily_accumulate = [](std::array<AccumulationType, 2> &acc, const InputType &input, const WeightType &weight) {
@@ -56,7 +57,7 @@ struct DefaultMACOperation {
         requires(std::is_same_v<typename std::remove_cvref_t<AccumulationMatrixType>::value_type, AccumulationType_> &&
                  std::is_same_v<typename std::remove_cvref_t<InputMatrixType>::value_type, InputType_> && std::is_same_v<typename std::remove_cvref_t<WeightMatrixType>::value_type, WeightType_>)
     __attribute__((always_inline)) inline static void op(AccumulationMatrixType &accumulation, const InputMatrixType &input, const WeightMatrixType &weights) {
-        static_assert(AccumulationMatrixType::order.containsOnly("bo"), "AccumulationMatrixType must be 'ibo' sub-(Input, Batch, Output)");
+        static_assert(std::remove_cvref_t<AccumulationMatrixType>::order.containsOnly("bo"), "AccumulationMatrixType must be 'ibo' sub-(Input, Batch, Output)");
         static_assert(InputMatrixType::order.containsOnly("ib"), "InputMatrixType must be 'ib' sub-(Input, Batch)");
         static_assert(WeightMatrixType::order.containsOnly("iob"), "WeightMatrixType must be 'io' sub-(Input, Output)");
 
@@ -89,7 +90,7 @@ struct RealResultMACOperation {
         requires(std::is_same_v<typename std::remove_cvref_t<AccumulationMatrixType>::value_type, AccumulationType_> &&
                  std::is_same_v<typename std::remove_cvref_t<InputMatrixType>::value_type, InputType_> && std::is_same_v<typename std::remove_cvref_t<WeightMatrixType>::value_type, WeightType_>)
     __attribute__((always_inline)) inline static void op(AccumulationMatrixType &output, const InputMatrixType &input, const WeightMatrixType &weights) {
-        static_assert(AccumulationMatrixType::order.containsOnly("bo"), "AccumulationMatrixType must be 'ibo' sub-(Input, Batch, Output)");
+        static_assert(std::remove_cvref_t<AccumulationMatrixType>::order.containsOnly("bo"), "AccumulationMatrixType must be 'ibo' sub-(Input, Batch, Output)");
         static_assert(InputMatrixType::order.containsOnly("ib"), "InputMatrixType must be 'ib' sub-(Input, Batch)");
         static_assert(WeightMatrixType::order.containsOnly("iob"), "WeightMatrixType must be 'io' sub-(Input, Output)");
 
@@ -136,10 +137,10 @@ struct MACOperationTuple_helper;
 template <template <typename InputType, typename WeightType, typename BiasType> class... MACOperations, std::size_t... Is>
 struct MACOperationTuple_helper<std::index_sequence<Is...>, MACOperations...> {
     template <typename InputType, typename WeightType, typename BiasType>
-    struct FuzedMACOperation;
+    struct FusedMACOperation;
 
     template <typename... InputTypes, typename... WeightTypes, typename... BiasTypes>
-    struct FuzedMACOperation<std::tuple<InputTypes...>, std::tuple<WeightTypes...>, std::tuple<BiasTypes...>> {
+    struct FusedMACOperation<std::tuple<InputTypes...>, std::tuple<WeightTypes...>, std::tuple<BiasTypes...>> {
         using InputType_  = std::tuple<InputTypes...>;
         using WeightType_ = std::tuple<WeightTypes...>;
         using BiasType_   = std::tuple<BiasTypes...>;
@@ -151,21 +152,26 @@ struct MACOperationTuple_helper<std::index_sequence<Is...>, MACOperations...> {
         using AccumulationType_    = std::tuple<decltype(std::declval<std::tuple_element_t<Is, AccumulationType_tmp>>() +
                                                       std::declval<std::tuple_element_t<Is, InputType_>>() * std::declval<std::tuple_element_t<Is, WeightType_>>())...>;
 
-        constexpr static auto lambda = [](InputType_ &inputs, const WeightType_ &weights, const AccumulationType_ &accums) {
-            // (MACOperations<std::tuple_element_t<Is, InputType_>, std::tuple_element_t<Is, WeightType_>, std::tuple_element_t<Is, BiasType_>>::lambda(std::get<Is>(accums), std::get<Is>(inputs),
-            //                                                                                                                                          std::get<Is>(weights)),
-            //  ...);
+        constexpr static auto lambda = [](InputType_ &inputs, const WeightType_ &weights, const AccumulationType_ &accums) -> void {
+            (std::tuple_element_t<Is, MACOperations_>::lambda(std::get<Is>(inputs), std::get<Is>(weights), std::get<Is>(accums)), ...);
         };
         using LambdaType = decltype(lambda);
+
+        template<typename Mac,DimensionOrder OperationOrder = "boi", IsMatrixType AccumulationMatrixTypes, IsMatrixType InputMatrixTypes, IsMatrixType WeightMatrixTypes>
+        __attribute__((always_inline)) inline static void op_helper(AccumulationMatrixTypes &&accumulations, const InputMatrixTypes &inputs, const WeightMatrixTypes &weights){
+            Mac::template op<AccumulationMatrixTypes, InputMatrixTypes, WeightMatrixTypes, OperationOrder>(
+                accumulations, inputs, weights);
+        }
+
 
         template <IsMatrixType AccumulationMatrixTypes, IsMatrixType InputMatrixTypes, IsMatrixType WeightMatrixTypes, DimensionOrder OperationOrder = "boi">
             requires(std::is_same_v<typename std::remove_cvref_t<AccumulationMatrixTypes>::value_type, AccumulationType_> &&
                      std::is_same_v<typename std::remove_cvref_t<InputMatrixTypes>::value_type, InputType_> && std::is_same_v<typename std::remove_cvref_t<WeightMatrixTypes>::value_type, WeightType_>)
-        __attribute__((always_inline)) inline static void op(AccumulationMatrixTypes &accumulations, const InputMatrixTypes &inputs, const WeightMatrixTypes &weights) {
-            (std::tuple_element_t<Is, MACOperations_>::template op<std::tuple_element_t<Is, AccumulationMatrixTypes>, std::tuple_element_t<Is, InputMatrixTypes>, std::tuple_element_t<Is, WeightMatrixTypes>,
-                                                          OperationOrder>(std::get<Is>(accumulations), std::get<Is>(inputs), std::get<Is>(weights)),
-             ...);
+        __attribute__((always_inline)) inline static void op(AccumulationMatrixTypes &&accumulations, const InputMatrixTypes &inputs, const WeightMatrixTypes &weights) {
+            (op_helper<std::tuple_element_t<Is, MACOperations_>, OperationOrder>(selectFused<Is>(accumulations), selectFused<Is>(inputs),
+                                                                                                                                       selectFused<Is>(weights)),...);
         }
+
 
         constexpr static auto pre_processing = [](const BiasType_ &biases) -> AccumulationType_ {
             return AccumulationType_{
@@ -210,6 +216,6 @@ concept IsMACOperation = requires(MACOperation<InputType, WeightType, BiasType> 
 
 static_assert(IsMACOperation<DefaultMACOperation, float, float, float>, "DefaultMACOperation should be a valid MAC operation");
 static_assert(IsMACOperation<NonMACOperation, float, float, float>, "NonMACOperation should be a valid MAC operation");
-static_assert(IsMACOperation<MACOperationTuple<DefaultMACOperation, DefaultMACOperation>::FuzedMACOperation, std::tuple<float, float>, std::tuple<float, float>, std::tuple<float, float>>,
+static_assert(IsMACOperation<MACOperationTuple<DefaultMACOperation, DefaultMACOperation>::FusedMACOperation, std::tuple<float, float>, std::tuple<float, float>, std::tuple<float, float>>,
               "MACOperationTuple should be a valid MAC operation");
 // static_assert(IsMACOperation<RealResultMACOperation, std::complex<float>,std::complex<float>,float>, "RealResultMACOperation should be a valid MAC operation");

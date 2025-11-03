@@ -76,7 +76,7 @@ void printValue(const T &value) {
     } else if constexpr (std::is_same_v<Complex<float>,T>) {
         printf("%8.1e+%8.1ei, ", static_cast<float>(value.real()), static_cast<float>(value.imag())); // Print each element with 4 decimal places
     } else {
-        printf("%8.1e, ", static_cast<float>(value)); // just try to print it as float
+        std::cout << value << ", ";     // Fallback for other types
     }
 }
 

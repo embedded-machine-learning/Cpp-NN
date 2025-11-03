@@ -14,7 +14,7 @@
 #define __LINEAR_FORCE_INLINE__ false
 #endif
 
-#warning "TODO: check the reference implenetation for questianble std::move" 
+#warning "TODO: check the reference implenetation for questianble std::move"
 
 namespace functions::linear {
 /*
@@ -42,19 +42,20 @@ template <std::size_t SuggestedSubBatchSize                         = 1, // unun
           typename Lambda                                           = decltype([]() {}),
           IsMatrixType... ActivationInformationMatrixType>
     requires(IsMACOperation<MACOperator, typename InputMatrixType::value_type, typename WeightMatrixType::value_type, typename BiasMatrixType::value_type>)
-    #if __LINEAR_FORCE_INLINE__
-        __attribute__((always_inline)) inline // Force inlining for performance
-    #else
-        inline // Let the compiler decide the inlining
-    #endif
-    // __attribute__((noinline))
-void Linear( // Function Parameters
-        const InputMatrixType  &Input,
-        OutputMatrixType       &Output,
-        const WeightMatrixType &Weights,
-        const BiasMatrixType   &Bias,
-        const Lambda           &Act,
-        const ActivationInformationMatrixType &...ActivationParameters) {
+#if __LINEAR_FORCE_INLINE__
+__attribute__((always_inline)) inline // Force inlining for performance
+#else
+inline // Let the compiler decide the inlining
+#endif
+                                      // __attribute__((noinline))
+        void
+        Linear( // Function Parameters
+                const InputMatrixType  &Input,
+                OutputMatrixType       &Output,
+                const WeightMatrixType &Weights,
+                const BiasMatrixType   &Bias,
+                const Lambda           &Act,
+                const ActivationInformationMatrixType &...ActivationParameters) {
 
     static_assert(InputMatrixType::order.contains('C'), "InputMatrixType must contain 'C' for input channels");
     static_assert(OutputMatrixType::order.contains('C'), "OutputMatrixType must contain 'O' for output channels");
@@ -107,9 +108,9 @@ void Linear( // Function Parameters
 
     // activation_parameters reinterpretations
     // Questionalble move here, TODO: review
-    [[maybe_unused]] const auto broadcast_permute = [=](const auto &matrix) {
-        return std::move(permute<"BC">(conditionalBroadcast<"B", {batch_size}>(conditionalReplace<"E", "C">(conditionalReplicate<"E", {output_channels}>(matrix)))));
-    };
+    [[maybe_unused]]
+    const auto broadcast_permute =
+            [=](const auto &matrix) { return std::move(permute<"BC">(conditionalBroadcast<"B", {batch_size}>(conditionalReplace<"E", "C">(conditionalReplicate<"E", {output_channels}>(matrix))))); };
 
     // get data types
     // using AccumulationType = typename BiasMatrixType::value_type;
@@ -211,7 +212,7 @@ __attribute__((always_inline)) constexpr inline auto weightSubBio(WeightMatrixTy
 
     // clang-format on
 
-    //return std::make_tuple(materialize(Weight_A_split), materialize(Weight_B_split), materialize(Weight_C_split), materialize(Weight_D_split));
+    // return std::make_tuple(materialize(Weight_A_split), materialize(Weight_B_split), materialize(Weight_C_split), materialize(Weight_D_split));
     return makeAlignedMatrixCollection<4>(materialize(Weight_A_split), materialize(Weight_B_split), materialize(Weight_C_split), materialize(Weight_D_split));
 }
 
@@ -253,17 +254,17 @@ template <typename WeightMatrixSplitType>
 using InverseWeightSubBioMatrixType = typename WeightSubDivideInverseHelper<WeightMatrixSplitType>::WeightMatrixTypeRecombined;
 
 template <typename Matrices>
-__attribute__((always_inline)) constexpr inline auto inverseWeightSubBio(Matrices &weights) {
+__attribute__((always_inline)) constexpr inline auto inverseWeightSubBio(const Matrices &weights) {
     static_assert(std::tuple_size<std::remove_cvref_t<Matrices>>::value == 4, "weights must be a tuple of 4 matrices");
-    auto Matrix_A = std::get<0>(weights);
-    auto Matrix_B = std::get<1>(weights);
-    auto Matrix_C = std::get<2>(weights);
-    auto Matrix_D = std::get<3>(weights);
+    auto & Matrix_A = std::get<0>(weights);
+    auto & Matrix_B = std::get<1>(weights);
+    auto & Matrix_C = std::get<2>(weights);
+    auto & Matrix_D = std::get<3>(weights);
 
-    auto Matrix_A_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(std::move(Matrix_A))));
-    auto Matrix_B_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(std::move(Matrix_B))));
-    auto Matrix_C_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(std::move(Matrix_C))));
-    auto Matrix_D_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(std::move(Matrix_D))));
+    auto Matrix_A_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(Matrix_A)));
+    auto Matrix_B_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(Matrix_B)));
+    auto Matrix_C_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(Matrix_C)));
+    auto Matrix_D_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(Matrix_D)));
 
     auto Matrix_AB = concatenate<0>(std::move(Matrix_A_collapsed), std::move(Matrix_B_collapsed));
     auto Matrix_CD = concatenate<0>(std::move(Matrix_C_collapsed), std::move(Matrix_D_collapsed));
@@ -275,9 +276,43 @@ __attribute__((always_inline)) constexpr inline auto inverseWeightSubBio(Matrice
 
 template <typename MatrixType>
     requires(IsMatrixType<MatrixType>)
-__attribute__((always_inline)) constexpr inline auto inverseWeightSubBio(MatrixType &weights) {
+__attribute__((always_inline)) constexpr inline auto inverseWeightSubBio(const MatrixType &weights) {
     return std::move(weights); // If the matrix is not a tuple, just return it as is
 }
+
+template <typename... Matrices>
+__attribute__((always_inline)) constexpr inline auto pack(const Matrices &...weights) {
+    static_assert(((std::tuple_size<std::remove_cvref_t<Matrices>>::value == 4) && ...), "weights must be a tuple of 4 matrices");
+    using FirstPack                = std::tuple_element_t<0, std::tuple<std::remove_cvref_t<Matrices>...>>;
+    constexpr Dim_size_t alignment = FirstPack::align;
+    // there are still 4 matrixes per pack, they should split and all packs are fused, then repacked to aligned collection
+
+    return makeAlignedMatrixCollectionNoSafeGuard<alignment>(      // forced linebreak
+            (fuse(materialize(std::get<0>(weights))...)), // forced linebreak
+            (fuse(materialize(std::get<1>(weights))...)), // forced linebreak
+            (fuse(materialize(std::get<2>(weights))...)), // forced linebreak
+            (fuse(materialize(std::get<3>(weights))...)));
+}
+
+template <typename... Matrices>
+    requires((IsMatrixType<Matrices> && ...))
+__attribute__((always_inline)) constexpr inline auto pack(const Matrices &... weights) {
+    return materialize(fuse(weights...));   // If the matrices are not tuples, just fuse them as is
+}
+
+template <Dim_size_t SuggestedSubInputChannels, Dim_size_t SuggestedSubOutputChannels, IsMatrixType... WeightMatrixType>
+    requires((std::remove_cvref_t<WeightMatrixType>::order.remove("IO").length() == 0)&& ...)
+__attribute__((always_inline)) constexpr inline auto weightSubBioEarlyFusion(const WeightMatrixType &... weights) {
+    return weightSubBio<SuggestedSubInputChannels,SuggestedSubOutputChannels>(fuse(weights...));
+}
+
+template <Dim_size_t SuggestedSubInputChannels, Dim_size_t SuggestedSubOutputChannels, IsMatrixType... WeightMatrixType>
+    requires((std::remove_cvref_t<WeightMatrixType>::order.remove("IO").length() == 0)&& ...)
+__attribute__((always_inline)) constexpr inline auto weightSubBioLateFusion(const WeightMatrixType &... weights) {
+    return pack(weightSubBio<SuggestedSubInputChannels,SuggestedSubOutputChannels>(weights)...);
+}
+
+
 
 template <std::size_t SuggestedSubBatchSize                         = 1,
           template <typename, typename, typename> class MACOperator = DefaultMACOperation,
@@ -288,11 +323,11 @@ template <std::size_t SuggestedSubBatchSize                         = 1,
           typename Lambda                                           = decltype([]() {}),
           IsMatrixType... ActivationInformationMatrixType>
     requires(std::tuple_size_v<std::remove_cvref_t<WeightMatrixType>> == 4)
-    #if __LINEAR_FORCE_INLINE__
-        __attribute__((always_inline)) inline // Force inlining for performance
-    #else
-        inline // Let the compiler decide the inlining
-    #endif
+#if __LINEAR_FORCE_INLINE__
+__attribute__((always_inline)) inline // Force inlining for performance
+#else
+inline // Let the compiler decide the inlining
+#endif
         void
         Linear( // Function Parameters
                 const InputMatrixType  &Input,
@@ -414,8 +449,8 @@ template <std::size_t SuggestedSubBatchSize                         = 1,
             };
 
             // Apply activation function
-            loopUnrolled([=](OutputMatrixType::value_type &a, const AccumulationType &b, const auto &...activation_parameters) { a = Act(MACOperator_::post_processing(b), activation_parameters...); },
-                         out_sliced, sum_matrix, broadcast_permute(ActivationParameters)...);
+            loopUnrolled([=](auto &&a, const AccumulationType &b, const auto &...activation_parameters) { a = Act(MACOperator_::post_processing(b), activation_parameters...); }, out_sliced,
+                         sum_matrix, broadcast_permute(ActivationParameters)...);
         }
         if constexpr (sub_output_channels_rest > 0) {
             // slice output channels
@@ -449,8 +484,8 @@ template <std::size_t SuggestedSubBatchSize                         = 1,
                         {batch, output_channels - sub_output_channels_rest}));
             };
             // Apply activation function
-            loopUnrolled([&](OutputMatrixType::value_type &a, const AccumulationType &b, const auto &...activation_parameters) { a = Act(MACOperator_::post_processing(b), activation_parameters...); },
-                         out_sliced, sum_matrix, broadcast_permute(ActivationParameters)...);
+            loopUnrolled([&](auto &&a, const AccumulationType &b, const auto &...activation_parameters) { a = Act(MACOperator_::post_processing(b), activation_parameters...); }, out_sliced,
+                         sum_matrix, broadcast_permute(ActivationParameters)...);
         }
     }
 
@@ -493,8 +528,8 @@ template <std::size_t SuggestedSubBatchSize                         = 1,
                         {batch_size - sub_batch_size_rest, output_channel}));
             };
             // Apply activation function
-            loopUnrolled([&](OutputMatrixType::value_type &a, const AccumulationType &b, const auto &...activation_parameters) { a = Act(MACOperator_::post_processing(b), activation_parameters...); },
-                         out_sliced, sum_matrix, broadcast_permute(ActivationParameters)...);
+            loopUnrolled([&](auto &&a, const AccumulationType &b, const auto &...activation_parameters) { a = Act(MACOperator_::post_processing(b), activation_parameters...); }, out_sliced,
+                         sum_matrix, broadcast_permute(ActivationParameters)...);
         }
         if constexpr (sub_output_channels_rest > 0) {
             // slice output channels
@@ -531,8 +566,8 @@ template <std::size_t SuggestedSubBatchSize                         = 1,
                         {batch_size - sub_batch_size_rest, output_channels - sub_output_channels_rest}));
             };
             // Apply activation function
-            loopUnrolled([=](OutputMatrixType::value_type &a, const AccumulationType &b, const auto &...activation_parameters) { a = Act(MACOperator_::post_processing(b), activation_parameters...); },
-                         out_sliced, sum_matrix, broadcast_permute(ActivationParameters)...);
+            loopUnrolled([=](auto &&a, const AccumulationType &b, const auto &...activation_parameters) { a = Act(MACOperator_::post_processing(b), activation_parameters...); }, out_sliced,
+                         sum_matrix, broadcast_permute(ActivationParameters)...);
         }
     }
 }

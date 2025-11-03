@@ -128,7 +128,8 @@ struct AlignedMatrixCollection;
 template <Dim_size_t Align, IsMatrixType CurrentMatrix, IsMatrixType... OtherMatrixes>
 requires(sizeof(CurrentMatrix)%Align != 0 && sizeof...(OtherMatrixes) > 0)
 struct AlignedMatrixCollection<Align, CurrentMatrix, OtherMatrixes...> {
-    using Type = MaterializedMatrix<CurrentMatrix>;
+    using Type = std::remove_cvref_t<CurrentMatrix>;
+    constexpr static Dim_size_t align=Align;
     Type                                             data;
     char                                             padding[Align - (sizeof(Type) - 1) % Align - 1];
     AlignedMatrixCollection<Align, OtherMatrixes...> other_matrixes;
@@ -156,7 +157,8 @@ struct AlignedMatrixCollection<Align, CurrentMatrix, OtherMatrixes...> {
 template <Dim_size_t Align, IsMatrixType CurrentMatrix>
 requires(sizeof(CurrentMatrix)%Align != 0)
 struct AlignedMatrixCollection<Align, CurrentMatrix> {
-    using Type = MaterializedMatrix<CurrentMatrix>;
+    using Type = std::remove_cvref_t<CurrentMatrix>;
+    constexpr static Dim_size_t align=Align;
     Type data;
     char padding[Align - (sizeof(Type) - 1) % Align - 1];
 
@@ -179,7 +181,8 @@ struct AlignedMatrixCollection<Align, CurrentMatrix> {
 template <Dim_size_t Align, IsMatrixType CurrentMatrix, IsMatrixType... OtherMatrixes>
 requires(sizeof(CurrentMatrix)%Align == 0 && sizeof...(OtherMatrixes) > 0)
 struct AlignedMatrixCollection<Align, CurrentMatrix, OtherMatrixes...> {
-    using Type = MaterializedMatrix<CurrentMatrix>;
+    using Type = std::remove_cvref_t<CurrentMatrix>;
+    constexpr static Dim_size_t align=Align;
     Type                                             data;
     AlignedMatrixCollection<Align, OtherMatrixes...> other_matrixes;
 
@@ -206,7 +209,8 @@ struct AlignedMatrixCollection<Align, CurrentMatrix, OtherMatrixes...> {
 template <Dim_size_t Align, IsMatrixType CurrentMatrix>
 requires(sizeof(CurrentMatrix)%Align == 0)
 struct AlignedMatrixCollection<Align, CurrentMatrix> {
-    using Type = MaterializedMatrix<CurrentMatrix>;
+    using Type = std::remove_cvref_t<CurrentMatrix>;
+    constexpr static Dim_size_t align=Align;
     Type data;
 
     constexpr AlignedMatrixCollection(CurrentMatrix &&matrix) : data(std::forward<CurrentMatrix>(matrix)) {
@@ -226,9 +230,13 @@ struct AlignedMatrixCollection<Align, CurrentMatrix> {
 
 template <Dim_size_t Align, IsMatrixType... Matrixes>
 constexpr auto makeAlignedMatrixCollection(Matrixes &&...matrices) {
-    return std::move(AlignedMatrixCollection<Align, Matrixes...>(materialize(std::forward<Matrixes>(matrices))...));
+    return AlignedMatrixCollection<Align, Matrixes...>(materialize(std::forward<Matrixes>(matrices))...);
 }
 
+template <Dim_size_t Align, IsMatrixType... Matrixes>
+constexpr auto makeAlignedMatrixCollectionNoSafeGuard(Matrixes &&...matrices) {
+    return AlignedMatrixCollection<Align, Matrixes...>(std::move(matrices)...);
+}
 template <typename>
 struct is_instance_of_AlignedMatrixCollection : std::false_type {};
 

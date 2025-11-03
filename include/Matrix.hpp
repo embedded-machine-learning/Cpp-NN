@@ -356,6 +356,12 @@ concept IsMatrixType = requires {
     // &MatrixType::at;                                           // At function must exist
 };
 
+template <typename MatrixType>
+concept IsFuzedMatrixType = requires {
+    requires IsMatrixType<MatrixType>;
+    &std::tuple_size_v<typename std::remove_cvref_t<MatrixType>::value_type>;
+};
+
 template <typename IndexType>
 concept IsIndexType = std::is_convertible_v<IndexType, Dim_size_t>;
 
@@ -428,11 +434,16 @@ template <IsMatrixType BaseMatrixType, DimensionOrder Old, DimensionOrder New, t
 struct CollaplsedMatrixType;
 
 template <typename Is, IsMatrixType... BaseMatrixType>
-    requires(((std::tuple_element_t<0, std::tuple<BaseMatrixType...>>::number_of_dimensions == BaseMatrixType::number_of_dimensions) && ...) // All matrices must have the same number of dimensions
-             && ((std::tuple_element_t<0, std::tuple<BaseMatrixType...>>::order == BaseMatrixType::order) && ...)                            // All matrices must have the same dimension order
-             && ((std::tuple_element_t<0, std::tuple<BaseMatrixType...>>::dimensions == BaseMatrixType::dimensions) && ...)                  // All matrices must have the same dimensions
+    requires(((std::tuple_element_t<0, std::tuple<std::remove_cvref_t<BaseMatrixType>...>>::number_of_dimensions == std::remove_cvref_t<BaseMatrixType>::number_of_dimensions) &&
+              ...) // All matrices must have the same number of dimensions
+             && ((std::tuple_element_t<0, std::tuple<std::remove_cvref_t<BaseMatrixType>...>>::order == std::remove_cvref_t<BaseMatrixType>::order) &&
+                 ...) // All matrices must have the same dimension order
+             && ((std::tuple_element_t<0, std::tuple<std::remove_cvref_t<BaseMatrixType>...>>::dimensions == std::remove_cvref_t<BaseMatrixType>::dimensions) &&
+                 ...) // All matrices must have the same dimensions
              )
-struct FuzedMatrixType;
+struct FusedMatrixType;
+
+
 
 // Matrix definitions
 template <typename DataType,
@@ -457,7 +468,7 @@ struct MatrixType<DataType, LocalOrder, ContainerType, NumberOfDimensions, Dims,
 
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         checkBounds<dimensions[VariadicIndices]...>({(Dim_size_t)dim...});
         return data[((offsets[VariadicIndices] * std::get<VariadicIndices>(std::make_tuple(dim...))) + ...)];
     }
@@ -471,7 +482,7 @@ struct MatrixType<DataType, LocalOrder, ContainerType, NumberOfDimensions, Dims,
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length())
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         constexpr std::array<Dim_size_t, number_of_dimensions> permutation_order = order.template permutationOrderComputation<number_of_dimensions>(InterpretedDimensionOrder);
         const auto                                             dims_tupled       = std::make_tuple(dim...);
         const auto                                             dims_permuted     = std::make_tuple(std::get<permutation_order[VariadicIndices]>(dims_tupled)...);
@@ -521,7 +532,7 @@ struct PermutedMatrixType<BaseMatrixType, LocalOrder, std::index_sequence<Variad
 
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         checkBounds<dimensions[VariadicIndices]...>({(Dim_size_t)dim...});
         // return data.at(std::get<permutation_to_base[VariadicIndices]>(std::make_tuple(dim...))...);
         return data.template at<order>(dim...);
@@ -537,7 +548,7 @@ struct PermutedMatrixType<BaseMatrixType, LocalOrder, std::index_sequence<Variad
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length() && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         constexpr std::array<Dim_size_t, number_of_dimensions> permutation_order = order.template permutationOrderComputation<number_of_dimensions>(InterpretedDimensionOrder);
         const auto                                             dims_tupled       = std::make_tuple(dim...);
         const auto                                             dims_permuted     = std::make_tuple(std::get<permutation_order[VariadicIndices]>(dims_tupled)...);
@@ -587,7 +598,7 @@ struct ConcatinadedMatrixType<ConcatenatedMatrixDimension, std::index_sequence<V
 
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         checkBounds<dimensions[VariadicIndices]...>({(Dim_size_t)dim...});
         return SelectionHelper<sizeof...(MatrixTypes) - 1, storage_type, DimTypes...>::dataSelection(data, dim...);
     }
@@ -601,7 +612,7 @@ struct ConcatinadedMatrixType<ConcatenatedMatrixDimension, std::index_sequence<V
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length() && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         constexpr std::array<Dim_size_t, number_of_dimensions> permutation_order = order.template permutationOrderComputation<number_of_dimensions>(InterpretedDimensionOrder);
         return this->at(std::get<permutation_order[VariadicIndices]>(std::make_tuple(dim...))...);
     }
@@ -697,7 +708,7 @@ struct SlicedMatrixType<BaseMatrixType, SlicedOrder, Slices, std::index_sequence
 
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         checkBounds<dimensions[VariadicIndices]...>({(Dim_size_t)dim...});
         const auto indices = std::make_tuple(std::get<permutation_order_sliced_to_back[VariadicIndices]>(std::make_tuple(static_cast<Dim_size_t>(dim)...))...);
         auto sliced = std::make_tuple(std::get<VariadicReducedIndices>(indices)..., (std::get<sizeof...(VariadicReducedIndices) + VariadicSliceIndices>(indices) + offset[VariadicSliceIndices])...);
@@ -715,7 +726,7 @@ struct SlicedMatrixType<BaseMatrixType, SlicedOrder, Slices, std::index_sequence
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length() && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         constexpr std::array<Dim_size_t, number_of_dimensions> permutation_order = order.template permutationOrderComputation<number_of_dimensions>(InterpretedDimensionOrder);
         return this->at(std::get<permutation_order[VariadicIndices]>(std::make_tuple(dim...))...);
     }
@@ -759,7 +770,7 @@ struct BroadcastedMatrixType<BaseMatrixType, AddedOrder, Lengths, std::index_seq
 
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         checkBounds<dimensions[VariadicIndices]...>({(Dim_size_t)dim...});
         return data.template at<BaseMatrixTypeNoRef::order>(std::get<VariadicBaseIndices>(std::make_tuple(dim...))...);
     }
@@ -773,7 +784,7 @@ struct BroadcastedMatrixType<BaseMatrixType, AddedOrder, Lengths, std::index_seq
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length() && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         constexpr std::array<Dim_size_t, number_of_dimensions> permutation_order = order.template permutationOrderComputation<number_of_dimensions>(InterpretedDimensionOrder);
         return this->at(std::get<permutation_order[VariadicIndices]>(std::make_tuple(dim...))...);
     }
@@ -830,7 +841,7 @@ struct ReplicatedMatrixType<BaseMatrixType,
 
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         checkBounds<dimensions[VariadicIndices]...>({(Dim_size_t)dim...});
         const auto permuted_dims = std::make_tuple(std::get<permutation_order[VariadicReducedIndices]>(std::make_tuple(dim...))..., zeros[VariadicNewIndices]...);
         const auto dims_in_order = std::make_tuple(std::get<permutation_order_inverse[VariadicIndices]>(permuted_dims)...);
@@ -848,7 +859,7 @@ struct ReplicatedMatrixType<BaseMatrixType,
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length() && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         constexpr std::array<Dim_size_t, number_of_dimensions> permutation_order = order.template permutationOrderComputation<number_of_dimensions>(InterpretedDimensionOrder);
         return this->at(std::get<permutation_order[VariadicIndices]>(std::make_tuple(dim...))...);
     }
@@ -884,7 +895,7 @@ struct ReplacedMatrixType<BaseMatrixType, ReplaceFrom, ReplaceTo, std::index_seq
 
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         checkBounds<dimensions[VariadicIndices]...>({(Dim_size_t)dim...});
         return data.at(dim...);
     }
@@ -898,7 +909,7 @@ struct ReplacedMatrixType<BaseMatrixType, ReplaceFrom, ReplaceTo, std::index_seq
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length() && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         constexpr std::array<Dim_size_t, number_of_dimensions> permutation_order = order.template permutationOrderComputation<number_of_dimensions>(InterpretedDimensionOrder);
         return this->at(std::get<permutation_order[VariadicIndices]>(std::make_tuple(dim...))...);
     }
@@ -941,7 +952,7 @@ struct NegativeMatrixType<BaseMatrixType, std::index_sequence<VariadicIndices...
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length())
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) const {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) const {
         constexpr std::array<Dim_size_t, number_of_dimensions> permutation_order = order.template permutationOrderComputation<number_of_dimensions>(InterpretedDimensionOrder);
         return this->at(std::get<permutation_order[VariadicIndices]>(std::make_tuple(dim...))...);
     }
@@ -1002,7 +1013,7 @@ struct SplitMatrixType<BaseMatrixType,
 
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         checkBounds<dimensions[VariadicIndices]...>({(Dim_size_t)dim...});
         constexpr auto permutation_to_split_at_back  = order_split_at_back.permutationOrderComputation<number_of_dimensions>(order);
         constexpr auto permutation_to_original_order = order_original.template permutationOrderComputation<sizeof...(VariadicOldIndices)>(order_original_at_back);
@@ -1030,7 +1041,7 @@ struct SplitMatrixType<BaseMatrixType,
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length() && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         constexpr std::array<Dim_size_t, number_of_dimensions> permutation_order = order.template permutationOrderComputation<number_of_dimensions>(InterpretedDimensionOrder);
         return this->at(std::get<permutation_order[VariadicIndices]>(std::make_tuple(dim...))...);
     }
@@ -1096,7 +1107,7 @@ struct CollaplsedMatrixType<BaseMatrixType,
     // zero division gets caught by bounds checker
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         checkBounds<dimensions[VariadicIndices]...>({(Dim_size_t)dim...});
 
         const Dim_size_t collapsed_dim = std::get<number_of_dimensions - 1>(std::make_tuple(dim...));
@@ -1126,7 +1137,7 @@ struct CollaplsedMatrixType<BaseMatrixType,
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length() && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         constexpr std::array<Dim_size_t, number_of_dimensions> permutation_order = order.template permutationOrderComputation<number_of_dimensions>(InterpretedDimensionOrder);
         return this->at(std::get<permutation_order[VariadicIndices]>(std::make_tuple(dim...))...);
     }
@@ -1160,7 +1171,7 @@ struct ReferencedMatrixType {
 
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         return data.at(dim...);
     }
 
@@ -1172,7 +1183,7 @@ struct ReferencedMatrixType {
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length() && !std::is_const_v<std::remove_reference_t<storage_type>>)
-    __attribute__((always_inline)) inline value_type &at(DimTypes... dim) {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         return data.template at<InterpretedDimensionOrder>(dim...);
     }
 
@@ -1184,13 +1195,16 @@ struct ReferencedMatrixType {
 };
 
 template <std::size_t... Is, IsMatrixType... BaseMatrixType>
-    requires(((std::tuple_element_t<0, std::tuple<BaseMatrixType...>>::number_of_dimensions == BaseMatrixType::number_of_dimensions) && ...) // All matrices must have the same number of dimensions
-             && ((std::tuple_element_t<0, std::tuple<BaseMatrixType...>>::order == BaseMatrixType::order) && ...)                            // All matrices must have the same dimension order
-             && ((std::tuple_element_t<0, std::tuple<BaseMatrixType...>>::dimensions == BaseMatrixType::dimensions) && ...)                  // All matrices must have the same dimensions
+    requires(((std::tuple_element_t<0, std::tuple<std::remove_cvref_t<BaseMatrixType>...>>::number_of_dimensions == std::remove_cvref_t<BaseMatrixType>::number_of_dimensions) &&
+              ...) // All matrices must have the same number of dimensions
+             && ((std::tuple_element_t<0, std::tuple<std::remove_cvref_t<BaseMatrixType>...>>::order == std::remove_cvref_t<BaseMatrixType>::order) &&
+                 ...) // All matrices must have the same dimension order
+             && ((std::tuple_element_t<0, std::tuple<std::remove_cvref_t<BaseMatrixType>...>>::dimensions == std::remove_cvref_t<BaseMatrixType>::dimensions) &&
+                 ...) // All matrices must have the same dimensions
              )
-struct FuzedMatrixType<std::index_sequence<Is...>, BaseMatrixType...> {
-    using value_type                                                                   = std::tuple<std::add_lvalue_reference_t<typename BaseMatrixType::value_type>...>;
-    using BaseType0NoRef                                                               = std::remove_cvref_t<std::tuple_element_t<0, std::tuple<BaseMatrixType...>>>;
+struct FusedMatrixType<std::index_sequence<Is...>, BaseMatrixType...> {
+    using value_type                                                                   = std::tuple<typename std::remove_cvref_t<BaseMatrixType>::value_type...>;
+    using BaseType0NoRef                                                               = std::remove_cvref_t<std::tuple_element_t<0, std::tuple<std::remove_cvref_t<BaseMatrixType>...>>>;
     static constexpr std::size_t                                  number_of_dimensions = BaseType0NoRef::number_of_dimensions;
     static constexpr DimensionOrder                               order                = BaseType0NoRef::order;
     static constexpr std::array<Dim_size_t, number_of_dimensions> dimensions           = BaseType0NoRef::dimensions;
@@ -1204,35 +1218,82 @@ struct FuzedMatrixType<std::index_sequence<Is...>, BaseMatrixType...> {
 
     storage_type data;
 
-    FuzedMatrixType(reference_or_rvalue<BaseMatrixType>... ref) : data(ref...) {
+    FusedMatrixType(reference_or_rvalue<BaseMatrixType>... ref) : data(ref...) {
     }
 
-    constexpr FuzedMatrixType(const_reference_or_rvalue<BaseMatrixType>... ref) : data(ref...) {
+    constexpr FusedMatrixType(const_reference_or_rvalue<BaseMatrixType>... ref) : data(ref...) {
     }
 
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions)
-    __attribute__((always_inline)) inline auto&& at(DimTypes... dim)
-    {
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
         return std::tie(std::get<Is>(data).at(dim...)...);
     }
 
     template <IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions)
-    __attribute__((always_inline)) constexpr inline auto&& at(DimTypes... dim) const {
-        return std::tie(std::get<Is>(data).at(dim...)...);
+    __attribute__((always_inline)) constexpr inline value_type at(DimTypes... dim) const {
+        return std::make_tuple(std::get<Is>(data).at(dim...)...);
     }
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length())
-    __attribute__((always_inline)) inline auto&& at(DimTypes... dim) {
-        return  std::tie(std::get<Is>(data).template at<InterpretedDimensionOrder>(dim...)...);
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
+        return std::tie(std::get<Is>(data).template at<InterpretedDimensionOrder>(dim...)...);
     }
 
     template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
         requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length())
-    __attribute__((always_inline)) constexpr inline auto&& at(DimTypes... dim) const {
-        return  std::tie(std::get<Is>(data).template at<InterpretedDimensionOrder>(dim...)...);
+    __attribute__((always_inline)) constexpr inline value_type at(DimTypes... dim) const {
+        return std::make_tuple(std::get<Is>(data).template at<InterpretedDimensionOrder>(dim...)...);
+    }
+};
+
+template <std::size_t Is, IsFuzedMatrixType BaseMatrixType>
+    requires(Is < std::tuple_size_v<typename std::remove_cvref_t<BaseMatrixType>::value_type> // Index is within bounds
+             && Is >= 0                                                                       // Index is non-negative
+             )
+struct SelectFusedMatrixType {
+    using BaseMatrixTypeNoRef = std::remove_cvref_t<BaseMatrixType>;
+    using storage_type = std::conditional_t<std::is_rvalue_reference_v<BaseMatrixType>, std::remove_reference_t<BaseMatrixType>, std::add_lvalue_reference_t<std::remove_reference_t<BaseMatrixType>>>;
+    using value_type   = std::tuple_element_t<Is, typename BaseMatrixTypeNoRef::value_type>;
+    static constexpr std::size_t                                  number_of_dimensions = BaseMatrixTypeNoRef::number_of_dimensions;
+    static constexpr DimensionOrder                               order                = BaseMatrixTypeNoRef::order;
+    static constexpr std::array<Dim_size_t, number_of_dimensions> dimensions           = BaseMatrixTypeNoRef::dimensions;
+    static constexpr bool                                         k_has_zero_dimension = BaseMatrixTypeNoRef::k_has_zero_dimension;
+
+    static_assert(order.length() == number_of_dimensions, "Dimension order length must match number of dimensions");
+
+    storage_type data;
+
+    SelectFusedMatrixType(reference_or_rvalue<BaseMatrixType> ref) : data(ref) {
+    }
+
+    constexpr SelectFusedMatrixType(const_reference_or_rvalue<BaseMatrixType> ref) : data(ref) {
+    }
+
+    template <IsIndexType... DimTypes>
+        requires(sizeof...(DimTypes) == number_of_dimensions)
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
+        return std::get<Is>(data.at(dim...));
+    }
+
+    template <IsIndexType... DimTypes>
+        requires(sizeof...(DimTypes) == number_of_dimensions)
+    __attribute__((always_inline)) constexpr inline value_type at(DimTypes... dim) const {
+        return std::get<Is>(data.at(dim...));
+    }
+
+    template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
+        requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length())
+    __attribute__((always_inline)) inline decltype(auto) at(DimTypes... dim) {
+        return std::get<Is>(data.template at<InterpretedDimensionOrder>(dim...));
+    }
+
+    template <DimensionOrder InterpretedDimensionOrder, IsIndexType... DimTypes>
+        requires(sizeof...(DimTypes) == number_of_dimensions && InterpretedDimensionOrder.length() == order.length())
+    __attribute__((always_inline)) constexpr inline value_type at(DimTypes... dim) const {
+        return std::get<Is>(data.template at<InterpretedDimensionOrder>(dim...));
     }
 };
 
@@ -1309,6 +1370,12 @@ using CollapsedMatrix = CollaplsedMatrixType<BaseMatrixType,
 template <IsMatrixType BaseMatrixType>
 using ReferencedMatrix = ReferencedMatrixType<BaseMatrixType>;
 
+template <IsMatrixType... BaseMatrixType>
+using FusedMatrix = FusedMatrixType<std::make_index_sequence<sizeof...(BaseMatrixType)>, BaseMatrixType...>;
+
+template <std::size_t Is, IsFuzedMatrixType BaseMatrixType>
+using SelectFusedMatrix = SelectFusedMatrixType<Is, BaseMatrixType>;
+
 template <IsMatrixType BaseMatrixType, DimensionOrder Order, Dim_size_t Size>
     requires(Order.length() == 1 && Size > 0)
 using OverrideDimensionMatrix =
@@ -1329,7 +1396,7 @@ struct OverrideRemoveDimensionHelper {
     static_assert(order.length() == BaseMatrixType::order.length() - RemoveOrder.length(), "Remove order must be a subset of the base matrix order");
     static_assert(order.length() > 0, "Remove order must not remove all dimensions from the base matrix order");
     static constexpr DimensionOrder                         first_dim        = DimensionOrder(order.order[0]); // The first dimension in the new order is the last dimension in the old order
-    static constexpr DimensionOrder                         fuzed_order      = RemoveOrder + first_dim;
+    static constexpr DimensionOrder                         Fused_order      = RemoveOrder + first_dim;
     static constexpr std::array<Dim_size_t, removed_length> dimension_slices = makeFilledArray<Dim_size_t, removed_length>(1); // The removed dimensions are all 1, since we are removing the dimension
 
     using LocalSlicedMatrix = SlicedMatrixType<BaseMatrixType,
@@ -1339,7 +1406,7 @@ struct OverrideRemoveDimensionHelper {
                                                std::make_index_sequence<removed_length>,
                                                std::make_index_sequence<std::remove_cvref_t<BaseMatrixType>::number_of_dimensions - removed_length>>;
 
-    using LocalCollapsedMatrix    = CollapsedMatrix<LocalSlicedMatrix, fuzed_order, first_dim>;
+    using LocalCollapsedMatrix    = CollapsedMatrix<LocalSlicedMatrix, Fused_order, first_dim>;
     using LocalPermutedMatrix     = PermutedMatrix<order, LocalCollapsedMatrix>;
     using LocalMaterializedMatrix = MaterializedMatrix<LocalPermutedMatrix>;
 };
@@ -1457,8 +1524,18 @@ constexpr conditional_const<std::is_const_v<std::remove_reference_t<BaseMatrixTy
 }
 
 template <IsMatrixType MatrixType>
-constexpr auto operator-(MatrixType &&matrix) {
+constexpr decltype(auto) operator-(MatrixType &&matrix) {
     return NegativeMatrix<MatrixType>(std::forward<MatrixType>(matrix));
+}
+
+template <std::size_t _=0, IsMatrixType... MatrixTypes>
+constexpr conditional_const<(std::is_const_v<std::remove_reference_t<MatrixTypes>> || ...), FusedMatrixType<std::make_index_sequence<sizeof...(MatrixTypes)>, MatrixTypes &&...>> fuse(MatrixTypes &&...matrices) {
+    return FusedMatrixType<std::make_index_sequence<sizeof...(MatrixTypes)>,MatrixTypes &&...>(std::forward<MatrixTypes>(matrices)...);
+}
+
+template <std::size_t Is, IsFuzedMatrixType MatrixType>
+constexpr conditional_const<std::is_const_v<std::remove_reference_t<MatrixType>>, SelectFusedMatrix<Is, MatrixType &&>> selectFused(MatrixType &&matrix) {
+    return SelectFusedMatrix<Is, MatrixType&&>(std::forward<MatrixType>(matrix));
 }
 
 static_assert(IsMatrixType<Matrix<float, DimensionOrder("12"), 1, 2>>, "Example Assert, for sanity, Matrix<float, DimensionOrder(\"12\"), 1,2> is not a valid MatrixType");
@@ -1480,6 +1557,7 @@ static_assert(IsMatrixType<SplitMatrix<__TestMatrix, "2", "34", 1, 2>>, "Example
 static_assert(IsMatrixType<CollapsedMatrix<__TestMatrix, "12", "Q">>, "Example Assert, for sanity, CollapsedMatrix<__TestMatrix, \"12\", \"Q\"> is not a valid MatrixType");
 static_assert(IsMatrixType<NegativeMatrix<__TestMatrix>>, "Example Assert, for sanity, NegativeMatrix<__TestMatrix> is not a valid MatrixType");
 static_assert(IsMatrixType<ReferencedMatrix<__TestMatrix>>, "Example Assert, for sanity, ReferencedMatrix<__TestMatrix> is not a valid MatrixType");
+static_assert(IsMatrixType<FusedMatrix<__TestMatrix, __TestMatrix, __TestMatrix>>, "Example Assert, for sanity, FusedMatrix<__TestMatrix,__TestMatrix,__TestMatrix> is not a valid MatrixType");
 static_assert(IsMatrixType<MaterializedMatrix<__TestMatrix>>, "Example Assert, for sanity, MaterializedMatrix<__TestMatrix> is not a valid MatrixType");
 static_assert(IsBaseMatrixType<MaterializedMatrix<__TestMatrix>>, "Example Assert, for sanity, MaterializedMatrix<__TestMatrix> is not a valid MatrixType");
 static_assert(IsMatrixType<OverrideDimensionMatrix<__TestMatrix, "1", 5>>, "Example Assert, for sanity, OverrideDimensionMatrix<\"1\", __TestMatrix, 5> is not a valid MatrixType");
@@ -1501,6 +1579,7 @@ auto I = split<"2", "34", 1, 2>(A); // Split the dimension "2" of matrix A into 
 auto J = collapse<"12", "Q">(A); // Collapse the dimensions "12" of matrix A into a single dimension "Q"
 // Negative of a matrix
 auto K = -A; // Negate the matrix A, this will return a NegativeMatrix
+auto L = fuze(A, B); // Fuse multiple matrices into a single matrix, the resulting matrix will have a tuple of values at each index
 
 
 ReferencedMatrixType<BaseMatrixType>    //Doesn't do anything, just used for conditional type changes
