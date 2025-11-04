@@ -7,6 +7,7 @@
 #include <type_traits>
 
 #include "../types/Complex.hpp"
+#include "../types/Benchmark.hpp"
 
 template <typename T>
 constexpr auto PassThrough = [](const T &x) { return x; };
@@ -69,8 +70,7 @@ template <typename T = float>
     requires(std::is_convertible_v<float, T>)
 constexpr auto InvertSQRT = [](const T val) -> T { return static_cast<T>(1 / sqrtf(val)); };
 
-template <typename T = float>
-    requires(std::is_convertible_v<float, T>)
+template <typename T>
 constexpr auto Norm = [](const Complex<T> val) -> T { return static_cast<T>(sqrtf(val.real() * val.real() + val.imag() * val.imag())); };
 
 template <std::size_t it = 1, typename T = float>

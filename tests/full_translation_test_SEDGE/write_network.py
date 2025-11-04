@@ -18,6 +18,8 @@ def write_network_weights(weights_dict, step_scale, file, Cpp_NN_include_path):
             write_weight(tmp_B, f"B{index}", 'OI', file)
         if 'B_bias' in weights_dict[index].keys():
             tmp_B_bias = weights_dict[index]['B_bias']
+            if tmp_B_bias.dtype not in complex_types:
+                tmp_B_bias = tmp_B_bias.astype(np.complex64)
             write_weight(tmp_B_bias, f"B{index}_bias", 'C', file)
         if 'C' in weights_dict[index].keys():
             tmp_C = weights_dict[index]['C']
@@ -26,8 +28,10 @@ def write_network_weights(weights_dict, step_scale, file, Cpp_NN_include_path):
             tmp_C_bias = weights_dict[index]['C_bias']
             if tmp_C_bias.dtype in complex_types:
                 print("C_bias is complex, check if it should be")
-                # tmp_C_bias = tmp_C_bias.real
-                tmp_C_bias = np.real(tmp_C_bias)
+                if weights_dict[index]['Activation'] != 'Norm':
+                    tmp_C_bias = np.real(tmp_C_bias)
+                else:
+                    print("Keeping complex C_bias for Norm activation")
             write_weight(tmp_C_bias, f"C{index}_bias", 'C', file)
         if 'SkipLayer' in weights_dict[index].keys():
             SkipLayer = weights_dict[index]['SkipLayer']
@@ -72,13 +76,22 @@ def write_network(weights_dict, file, Cpp_NN_include_path, B_KP=(12*4), C_KP=(12
     file.write('const auto network=layers::Sequence(\n')
     string = ""
     for index,_ in enumerate(weights_dict):
+        act = weights_dict[index]['Activation'] if 'Activation' in weights_dict[index].keys() else 'PassThrough'
+        CX_mac = 'DefaultMACOperation' if act == 'Norm' else 'RealResultMACOperation'
         if f'A' in weights_dict[index].keys() and f'SkipLayer' in weights_dict[index].keys() and weights_dict[index]['SkipLayer'] is not None:
-            string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, SkipLayer{index}_1_{S_KP}, LeakyReLU<float>),\n'
-            # string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, SkipLayer{index}, LeakyReLU<float>),\n'   # Default slow version
+            print('Layer eval: ', np.all(weights_dict[index]['B'].real==1),np.all(weights_dict[index]['B'].imag==0),np.all(weights_dict[index]['B_bias']==0))
+            print('Activation:', act, 'Using CX_mac:', CX_mac)
+            if np.all(weights_dict[index]['B'].real==1) and np.all(weights_dict[index]['B'].imag==0) and np.all(weights_dict[index]['B_bias']==0):
+                print("First layer opt found")
+                string += f'    layers::SedgeFirstLayerOp<float,Complex<float>,1,1,NonMACOperation,{CX_mac}>(A{index}, C{index}_1_{C_KP}, C{index}_bias, SkipLayer{index}_1_{S_KP}, {act}<float>),\n'
+            else:
+                string += f'    layers::Sedge<float,Complex<float>,1,1,DefaultMACOperation,{CX_mac}>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, SkipLayer{index}_1_{S_KP}, {act}<float>),\n'
+            # string += f'    layers::Sedge<float,Complex<float>,1,1,DefaultMACOperation,{CX_mac}>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, SkipLayer{index}_1_{S_KP}, {act}<float>),\n'
+            # string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, SkipLayer{index}, {act}<float>),\n'   # Default slow version
 
         elif f'A' in weights_dict[index].keys():
-            string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, Matrix<float, "E", 1>{{0}}, LeakyReLU<float>),\n'
-            # string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, Matrix<float, "E", 1>{{0}}, LeakyReLU<float>),\n' # Default slow version
+            string += f'    layers::Sedge<float,Complex<float>,1,1,DefaultMACOperation,{CX_mac}>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, Matrix<float, "E", 1>{{0}}, {act}<float>),\n'
+            # string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, Matrix<float, "E", 1>{{0}}, {act}<float>),\n' # Default slow version
     
     
     string += f'    layers::SumReduction<"S">(),\n'

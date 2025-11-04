@@ -23,6 +23,8 @@ struct Benchmark {
     static inline CounterType counted_comparisons{};
     static inline CounterType counted_extractions{};
     static inline CounterType counted_abs{};
+    static inline CounterType counted_sqrt{};
+
 
     static void resetAll() {
         counted_multiplications = 0;
@@ -31,6 +33,8 @@ struct Benchmark {
         counted_subtractions    = 0;
         counted_comparisons     = 0;
         counted_extractions     = 0;
+        counted_abs             = 0;
+        counted_sqrt            = 0;
     }
 
     template <typename Type>
@@ -46,6 +50,7 @@ struct Benchmark {
         static inline CounterType counted_comparisons{};
         static inline CounterType counted_extractions{};
         static inline CounterType counted_abs{};
+        static inline CounterType counted_sqrt{};
 
         using type                        = Type;
         constexpr TypeInstance() noexcept = default;
@@ -73,6 +78,7 @@ struct Benchmark {
             counted_comparisons     = 0;
             counted_extractions     = 0;
             counted_abs             = 0;
+            counted_sqrt            = 0;
         }
 
         // Static cast operators
@@ -223,16 +229,26 @@ __attribute__((always_inline)) inline helpers::Benchmark::TypeInstance<float> fa
     return ret;
 }
 
-// Print
-#if ENABLE_PRINT
-#include <iostream>
-
-template <typename Type>
-std::ostream &operator<<(std::ostream &os, const helpers::Benchmark::TypeInstance<Type> &obj) {
-    os << obj.get();
-    return os;
+__attribute__((always_inline)) inline helpers::Benchmark::TypeInstance<double> fabs(const helpers::Benchmark::TypeInstance<double> &value) {
+    helpers::Benchmark::TypeInstance<double> ret(fabs(value.get()));
+    helpers::Benchmark::counted_abs++;
+    helpers::Benchmark::TypeInstance<double>::counted_abs++;
+    return ret;
 }
-#endif
+
+__attribute__((always_inline)) inline helpers::Benchmark::TypeInstance<float> sqrtf(const helpers::Benchmark::TypeInstance<float> &value) {
+    helpers::Benchmark::TypeInstance<float> ret(sqrtf(value.get()));
+    helpers::Benchmark::counted_sqrt++;
+    helpers::Benchmark::TypeInstance<float>::counted_sqrt++;
+    return ret;
+}
+
+__attribute__((always_inline)) inline helpers::Benchmark::TypeInstance<double> sqrt(const helpers::Benchmark::TypeInstance<double> &value) {
+    helpers::Benchmark::TypeInstance<double> ret(sqrt(value.get()));
+    helpers::Benchmark::counted_sqrt++;
+    helpers::Benchmark::TypeInstance<double>::counted_sqrt++;
+    return ret;
+}
 
 // Numeric limit
 template <typename Type>
