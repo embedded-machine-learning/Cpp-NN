@@ -42,12 +42,6 @@ def write_network_weights(weights_dict, step_scale, file, Cpp_NN_include_path):
                 SkipLayer = np.ones((1), dtype=np.float32)
                 print("SkipLayer is None, using dummy matrix of ones")
                 write_weight(SkipLayer, f"SkipLayer{index}", 'E', file)
-                
-                write_weight(SkipLayer, f"SkipLayer{index}", 'OI', file)
-            else:
-                SkipLayer = np.ones((1), dtype=np.float32)
-                print("SkipLayer is None, using dummy matrix of ones")
-                write_weight(SkipLayer, f"SkipLayer{index}", 'E', file)
         if 'SkipLayer' not in weights_dict[index].keys() :
             # If no SkipLayer is defined, we use a matrix of ones
             print("SkipLayer not defined, using dummy matrix of ones")
