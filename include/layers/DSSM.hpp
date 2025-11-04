@@ -222,7 +222,7 @@ class DSSMLayer {
                 // x[t] = A*x[t-1] + B*U + BBias -> x[t] = A*x[t-1] + u
                 const auto input_expanded = replicate<"C", {hidden_channels}>(input_collapsed); // replicate input channels to match hidden channels
                 // Datatypes should be Complex, Complex, Real,
-                loop([](auto &x_t, const auto a, const auto u) { x_t += a * x_t + u; }, state, a_broadcasted, input_expanded);
+                loop([](auto &x_t, const auto a, const auto u) { x_t = a * x_t + u; }, state, a_broadcasted, input_expanded);
             } else 
             {
                 // May use fused activation function, as the order of the sequence is consistent as it is a single sequence
