@@ -339,7 +339,7 @@ inline // Let the compiler decide the inlining
 
     using BaseWeightMatrixType = decltype(materialize(inverseWeightSubBio(Weights)));
     static_assert(InputMatrixType::order.contains('C'), "InputMatrixType must contain 'C' for input channels");
-    static_assert(OutputMatrixType::order.contains('C'), "OutputMatrixType must contain 'O' for output channels");
+    static_assert(OutputMatrixType::order.contains('C'), "OutputMatrixType must contain 'C' for output channels");
     static_assert(BaseWeightMatrixType::order.contains('I'), "BaseWeightMatrixType must contain 'I' for input channels");
     static_assert(BaseWeightMatrixType::order.contains('O'), "BaseWeightMatrixType must contain 'O' for output channels");
     static_assert(BiasMatrixType::order.contains('C') != BiasMatrixType::order.contains('E'),

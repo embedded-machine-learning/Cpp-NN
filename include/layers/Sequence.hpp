@@ -167,9 +167,10 @@ struct Sequence {
         static_assert(buffer_size + output_size <= sizeof(buffer.data), "Buffer and output size exceed buffer size");
         static_assert(permanent_index + permanent_size <= sizeof(permanent.data), "Permanent index and size exceed permanent size");
 
-        char *const next_input_pointer = &(buffer.data[output_index]);       // Next Input Location
-        char *const buffer_pointer     = &(buffer.data[buffer_index]);       // Buffer Location
-        char *const permanent_pointer  = &(permanent.data[permanent_index]); // Permanent Memory Location
+        char *const next_input_pointer = &(buffer.data[output_index]); // Next Input Location
+        char *const buffer_pointer     = &(buffer.data[buffer_index]); // Buffer Location
+        char *const permanent_pointer =
+                (permanent_size > 0) ? &(permanent.data[permanent_index]) : &(buffer.data[buffer_index]); // Permanent Memory Location, use buffer memory as dummy if no permanent memory is required
 
         auto *intermediate_output = reinterpret_cast<NextInput *>(next_input_pointer);     // Use the buffer data as the output matrix
         auto *layer_buffer        = reinterpret_cast<LayerBuffer *>(buffer_pointer);       // Use the buffer data as the layer buffer
@@ -220,8 +221,9 @@ struct Sequence {
 
         static_assert(permanent_index + permanent_size <= sizeof(permanent.data), "Permanent index and size exceed permanent size");
 
-        char *const buffer_pointer    = &(buffer.data[buffer_index]);       // Buffer Location
-        char *const permanent_pointer = &(permanent.data[permanent_index]); // Permanent Memory Location
+        char *const buffer_pointer = &(buffer.data[buffer_index]); // Buffer Location
+        char *const permanent_pointer =
+                (permanent_size > 0) ? &(permanent.data[permanent_index]) : &(buffer.data[buffer_index]); // Permanent Memory Location, use buffer memory as dummy if no permanent memory is required
 
         auto *layer_buffer    = reinterpret_cast<LayerBuffer *>(buffer_pointer);       // Use the buffer data as the layer buffer
         auto *layer_permanent = reinterpret_cast<LayerPermanent *>(permanent_pointer); // Use the permanent data as the layer permanent memory
