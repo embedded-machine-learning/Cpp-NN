@@ -41,7 +41,10 @@ def write_network_weights(weights_dict, step_scale, file, Cpp_NN_include_path):
                     SkipLayer = SkipLayer.real
                 if SkipLayer.dtype != np.float32:
                     SkipLayer = SkipLayer.astype(np.float32)
-                write_weight(SkipLayer, f"SkipLayer{index}", 'OI', file)
+                if len(SkipLayer.shape) == 2:
+                    write_weight(SkipLayer, f"SkipLayer{index}", 'OI', file)
+                if len(SkipLayer.shape) == 1:
+                    write_weight(SkipLayer, f"SkipLayer{index}", 'E', file)
             else:
                 SkipLayer = np.ones((1), dtype=np.float32)
                 print("SkipLayer is None, using dummy matrix of ones")
@@ -90,7 +93,10 @@ def write_network(weights_dict, file, Cpp_NN_include_path, B_KP=(12*4), C_KP=(12
             # string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, SkipLayer{index}, {act}<float>),\n'   # Default slow version
 
         elif f'A' in weights_dict[index].keys():
-            string += f'    layers::Sedge<float,Complex<float>,1,1,DefaultMACOperation,{CX_mac}>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, Matrix<float, "E", 1>{{0}}, {act}<float>),\n'
+            if np.all(weights_dict[index]['B'].real==1) and np.all(weights_dict[index]['B'].imag==0) and np.all(weights_dict[index]['B_bias']==0):
+                string += f'    layers::SedgeFirstLayerOp<float,Complex<float>,1,1,NonMACOperation,{CX_mac}>(A{index}, C{index}_1_{C_KP}, C{index}_bias, Matrix<float, "E", 0>{{}}, {act}<float>),\n'
+            else:
+                string += f'    layers::Sedge<float,Complex<float>,1,1,DefaultMACOperation,{CX_mac}>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, Matrix<float, "E", 0>{{}}, {act}<float>),\n'
             # string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, Matrix<float, "E", 1>{{0}}, {act}<float>),\n' # Default slow version
     
     

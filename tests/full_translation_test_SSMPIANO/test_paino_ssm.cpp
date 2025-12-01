@@ -77,8 +77,6 @@ auto run_PianoSSM(pybind11::array_t<float> input) {
         // std::cout << "Running sub-sequence " << i << std::endl;
         const auto input_slice  = permute<"BSC">(slice<"S", sequence_length_sub>(input_matrix, {i}));
         auto       output_slice = permute<"BSC">(slice<"S", sequence_length_sub>(output_matrix, {i}));
-        // const auto& input_slice  = *reinterpret_cast<SubInputMatrixType *>(&input_matrix.data[i * input_channels]);
-        // auto& output_slice =  *reinterpret_cast<SubOutputMatrixType *>(&output_matrix.data[i]);
 
         // Run the network
         network(input_slice, output_slice, buffer, permanent);
