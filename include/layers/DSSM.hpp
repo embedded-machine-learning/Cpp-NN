@@ -123,11 +123,11 @@ class DSSMLayer {
               activation_parameters_(std::forward<ActivationMatrixInformation>(ActivationParameters)...), act_(std::forward<Lambda>(Act)) {
     }
 
-    template <bool         ContinueAfter       = true,
-              IsMatrixType InputMatrixType     = Matrix<float, "BCS", 1, input_channels>,
-              IsMatrixType OutputMatrixType    = OverrideDimensionMatrix<InputMatrixType, "C", output_channels>,
-              IsMatrixType BufferMatrixType    = Matrix<char, "E", 0>,
-              IsMatrixType PermanentMatrixType = Matrix<char, "E", 0>,
+    template <bool             ContinueAfter       = true,
+              IsMatrixType     InputMatrixType     = Matrix<float, "BCS", 1, input_channels>,
+              IsMatrixType     OutputMatrixType    = OverrideDimensionMatrix<InputMatrixType, "C", output_channels>,
+              IsBaseMatrixType BufferMatrixType    = Matrix<char, "E", 0>,
+              IsBaseMatrixType PermanentMatrixType = Matrix<char, "E", 0>,
               std::size_t... I>
     __attribute__((always_inline))
     // __attribute__((noinline))
@@ -222,8 +222,7 @@ class DSSMLayer {
                 const auto input_expanded = replicate<"C", {hidden_channels}>(input_collapsed); // replicate input channels to match hidden channels
                 // Datatypes should be Complex, Complex, Real,
                 loop([](auto &x_t, const auto a, const auto u) { x_t = a * x_t + u; }, state, a_broadcasted, input_expanded);
-            } else 
-            {
+            } else {
                 // May use fused activation function, as the order of the sequence is consistent as it is a single sequence
                 // x[t] = A*x[t-1] + BU + BBias
                 functions::linear::Linear<SuggestedSubBatchSizeComplex, BMACOperator_>(

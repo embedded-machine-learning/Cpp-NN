@@ -34,7 +34,7 @@ class BaseLayer {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
 
-    template <IsMatrixType InputMatrixType, IsMatrixType OutputMatrixType, IsMatrixType BufferMatrixType, IsMatrixType PermanentMatrixType>
+    template <IsMatrixType InputMatrixType, IsMatrixType OutputMatrixType, IsBaseMatrixType BufferMatrixType, IsBaseMatrixType PermanentMatrixType>
     __attribute__((always_inline)) inline void operator()(const InputMatrixType &Input, OutputMatrixType &Out, BufferMatrixType &buffer, PermanentMatrixType &permanent) const noexcept {
         static_assert(!std::is_same<typename InputMatrixType::type, void>::value, "Not Implemented");
     }
@@ -61,7 +61,7 @@ concept IsValidLayer = requires(LayerType layer) {
     { LayerType::template memory_permanent<typename LayerType::ExampleInputMatrix> } -> std::convertible_to<std::size_t>;
     {
         layer(std::declval<get_ExpectedInputMatrix<LayerType>>(), std::declval<get_ExpectedOutputMatrix<LayerType> &>(), std::declval<Matrix<char, "E", get_memory_buffer_size<LayerType>> &>(),
-                    std::declval<Matrix<char, "E", get_memory_permanent_size<LayerType>> &>())
+              std::declval<Matrix<char, "E", get_memory_permanent_size<LayerType>> &>())
     } -> std::same_as<void>;
 };
 

@@ -47,7 +47,7 @@ class LinearLayer {
     const BiasMatrixType_stored   bias_;
     const WeightMatrixType_stored weights_;
 
-    const Lambda                                                               Act;
+    const Lambda                                                                Act;
     const std::tuple<const std::remove_cvref_t<ActivationMatrixInformation>...> activation_parameters_;
 
     // Type information
@@ -70,16 +70,16 @@ class LinearLayer {
     static constexpr size_t memory_permanent = 0;
 
     // Constructor
-    constexpr LinearLayer(WeightMatrixType &&Weights, BiasMatrixType &&Bias, Lambda && Act, ActivationMatrixInformation &...ActivationParameters) noexcept
+    constexpr LinearLayer(WeightMatrixType &&Weights, BiasMatrixType &&Bias, Lambda &&Act, ActivationMatrixInformation &...ActivationParameters) noexcept
             : bias_(std::forward<BiasMatrixType>(Bias)), weights_(std::forward<WeightMatrixType>(Weights)), Act(std::forward<Lambda>(Act)),
               activation_parameters_(std::forward<ActivationMatrixInformation>(ActivationParameters)...) {};
 
-    template <bool         ContinueAfter            = true,
-              std::size_t  UsedSuggestedSubBatchSize = suggested_sub_batch_size,
-              IsMatrixType InputMatrixType,
-              IsMatrixType OutputMatrixType,
-              IsMatrixType BufferMatrixType    = Matrix<char, "E", 0>,
-              IsMatrixType PermanentMatrixType = Matrix<char, "E", 0>,
+    template <bool             ContinueAfter             = true,
+              std::size_t      UsedSuggestedSubBatchSize = suggested_sub_batch_size,
+              IsMatrixType     InputMatrixType,
+              IsMatrixType     OutputMatrixType,
+              IsBaseMatrixType BufferMatrixType    = Matrix<char, "E", 0>,
+              IsBaseMatrixType PermanentMatrixType = Matrix<char, "E", 0>,
               std::size_t... I>
     __attribute__((always_inline)) inline void operator()(const InputMatrixType &Input,
                                                           OutputMatrixType      &Out,
@@ -103,8 +103,7 @@ template <typename OutputType                                       = float,
           IsMatrixType BiasMatrixType                               = Matrix<OutputType, "BC", 1, 1>,
           typename Lambda                                           = decltype([](const OutputType a) { return a; }),
           IsMatrixType... ActivationMatrixInformation>
-          __attribute__((always_inline)) inline
-constexpr auto Linear( // Function Parameters
+__attribute__((always_inline)) inline constexpr auto Linear( // Function Parameters
         WeightMatrixType &&Weights,
         BiasMatrixType   &&Bias,
         Lambda           &&Act = {},

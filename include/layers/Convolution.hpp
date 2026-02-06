@@ -286,7 +286,7 @@ class ConvolutionLayer {
     }
 
     // To catch all the cases where the operator is not implemented, at the same time define the parameters
-    template <IsMatrixType InputMatrixType, IsMatrixType OutputMatrixType, IsMatrixType BufferMatrixType, IsMatrixType PermanentMatrixType, std::size_t... I>
+    template <IsMatrixType InputMatrixType, IsMatrixType OutputMatrixType, IsBaseMatrixType BufferMatrixType, IsBaseMatrixType PermanentMatrixType, std::size_t... I>
     __attribute__((always_inline)) inline void operator()(const InputMatrixType &Input,
                                                           OutputMatrixType      &Out,
                                                           BufferMatrixType      &buffer,

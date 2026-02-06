@@ -111,7 +111,7 @@ struct Sequence {
     // Constructor
     constexpr Sequence(Layers &&...layers) : layers(std::forward<Layers>(layers)...) {};
 
-    template <IsMatrixType InputMatrixType, IsMatrixType BufferMatrixType = Matrix<char, "E", 0>>
+    template <IsMatrixType InputMatrixType, IsBaseMatrixType BufferMatrixType = Matrix<char, "E", 0>>
     __attribute__((always_inline)) inline InputMatrixType *getInputMatrix(BufferMatrixType &buffer) const noexcept {
         static_assert(IsBaseMatrixType<BufferMatrixType>, "Buffer Matrix Type must be a Base Matrix Type");
         static_assert(sizeof(buffer.data) >= CurrentMemoryPlaning<InputMatrixType>::total_memory_buffer, "Buffer Memory Size does not match the required size");
@@ -120,7 +120,7 @@ struct Sequence {
         return reinterpret_cast<InputMatrixType *>(&buffer.data[input_index]);
     }
 
-    template <IsMatrixType InputMatrixType, IsMatrixType BufferMatrixType = Matrix<char, "E", 0>>
+    template <IsMatrixType InputMatrixType, IsBaseMatrixType BufferMatrixType = Matrix<char, "E", 0>>
     __attribute__((always_inline)) inline OutputMatrix<InputMatrixType> *getOutputMatrix(BufferMatrixType &buffer) const noexcept {
         static_assert(IsBaseMatrixType<BufferMatrixType>, "Buffer Matrix Type must be a Base Matrix Type");
         static_assert(sizeof(buffer.data) >= CurrentMemoryPlaning<InputMatrixType>::total_memory_buffer, "Buffer Memory Size does not match the required size");
@@ -133,8 +133,8 @@ struct Sequence {
               std::size_t                         At                  = 0,
               IsMatrixType                        InputMatrixType,
               IsMatrixType                        OutputMatrixType,
-              IsMatrixType                        BufferMatrixType              = Matrix<char, "E", 0>,
-              IsMatrixType                        PermanentMatrixType           = Matrix<char, "E", 0>,
+              IsBaseMatrixType                    BufferMatrixType              = Matrix<char, "E", 0>,
+              IsBaseMatrixType                    PermanentMatrixType           = Matrix<char, "E", 0>,
               typename CurrentMemoryPlaning                                     = CurrentMemoryPlaning<InputMatrixType>,
               std::array<MemoryLocation, sizeof...(Layers)> MemoryIndexSchedule = CurrentMemoryPlaning::template memory_index_locations<sizeof(BufferMatrixType::data), 0, 0>,
               typename... ProfilingFunctional>
@@ -191,8 +191,8 @@ struct Sequence {
               std::size_t                         At                  = 0,
               IsMatrixType                        InputMatrixType,
               IsMatrixType                        OutputMatrixType,
-              IsMatrixType                        BufferMatrixType,
-              IsMatrixType                        PermanentMatrixType,
+              IsBaseMatrixType                    BufferMatrixType,
+              IsBaseMatrixType                    PermanentMatrixType,
               typename CurrentMemoryPlaning                                     = CurrentMemoryPlaning<InputMatrixType>,
               std::array<MemoryLocation, sizeof...(Layers)> MemoryIndexSchedule = CurrentMemoryPlaning::template memory_index_locations<sizeof(BufferMatrixType::data), 0, 0>,
               typename... ProfilingFunctional>

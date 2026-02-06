@@ -1436,7 +1436,7 @@ concept IsPermutationalSame = (IsMatrixType<CmpMatrixType> && IsMatrixType<BaseM
 );
 
 template <typename T>
-concept IsBaseMatrixType = std::is_same_v<T, MaterializedMatrix<T>>;
+concept IsBaseMatrixType = std::is_same_v<std::remove_cvref_t<T>, MaterializedMatrix<std::remove_cvref_t<T>>>;
 
 template <DimensionOrder LocalOrder, IsMatrixType BaseMatrixType>
 constexpr conditional_const<std::is_const_v<std::remove_reference_t<BaseMatrixType>>, PermutedMatrix<LocalOrder, BaseMatrixType &&>> permute(BaseMatrixType &&matrix) {
