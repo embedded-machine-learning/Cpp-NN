@@ -6,8 +6,8 @@
 #include <sys/types.h>
 #include <type_traits>
 
-#include "../types/Complex.hpp"
 #include "../types/Benchmark.hpp"
+#include "../types/Complex.hpp"
 
 template <typename T>
 constexpr auto PassThrough = [](const T &x) { return x; };
@@ -19,6 +19,10 @@ constexpr auto Tanh = [](const T &x) { return std::tanh(x); };
 // constexpr auto FastTanh = [](const T val){
 //     static_assert(true, "FastTanh is only defined for float, use FastTanh<float> instead");
 // };
+template <typename T>
+constexpr auto ReLU = [](const T val) {
+    return (val < static_cast<T>(0)) ? (static_cast<T>(0)) : val; // Leaky ReLU with a slope of 0.01 for negative values
+};
 
 template <typename T>
 constexpr auto LeakyReLU = [](const T val) {
