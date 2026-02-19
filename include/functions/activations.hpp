@@ -24,6 +24,20 @@ constexpr auto LeakyReLU = [](const T val) {
     return (val < static_cast<T>(0)) ? (static_cast<T>(0.01) * val) : val; // Leaky ReLU with a slope of 0.01 for negative values
 };
 
+template <>
+constexpr auto LeakyReLU<int32_t> = [](const int32_t val, int32_t scale) -> int8_t {
+    return (val < static_cast<int32_t>(0)) ? (static_cast<int32_t>(0.01 * scale) * val) : val; // Leaky ReLU with a slope of 0.01 for negative values
+};
+
+
+
+template <typename T>
+constexpr auto ReLU = [](const T val) {
+    return (val < static_cast<T>(0)) ? static_cast<T>(0) : val; // ReLU activation function
+};
+
+
+
 template <typename T>
     requires(std::is_convertible_v<float, T>)
 constexpr auto FastTanh = [](const T val) -> T {

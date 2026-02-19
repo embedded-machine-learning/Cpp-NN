@@ -4,6 +4,7 @@
 #include <array>
 #include <concepts>
 #include <iostream>
+#include <iomanip>
 #include <tuple>
 
 #include <cstdio>
@@ -149,10 +150,11 @@ void printNDMatrix(const MatrixType &matrix) {
 
 template <std::same_as<layers::MemoryLocation> T>
 std::ostream &operator<<(std::ostream &os, const T memory_location) {
+    constexpr std::size_t field_width = 6; // Adjust the width as needed for better alignment
     os << "MemoryLocation: {"
-       << "Input_index: " << memory_location.Input_index << ", Input_size: " << memory_location.Input_size << ", Output_index: " << memory_location.Output_index
-       << ", Output_size: " << memory_location.Output_size << ", buffer_index: " << memory_location.buffer_index << ", buffer_size: " << memory_location.buffer_size
-       << ", permanent_index: " << memory_location.permanent_index << ", permanent_size: " << memory_location.permanent_size << "}";
+       << "Input_index: " << std::setw(field_width) <<memory_location.Input_index << ", Input_size: " << std::setw(field_width) << memory_location.Input_size << ", Output_index: " << std::setw(field_width) << memory_location.Output_index
+       << ", Output_size: " << std::setw(field_width) << memory_location.Output_size << ", buffer_index: " << std::setw(field_width) << memory_location.buffer_index << ", buffer_size: " << std::setw(field_width) << memory_location.buffer_size
+       << ", permanent_index: " << std::setw(field_width) << memory_location.permanent_index << ", permanent_size: " << std::setw(field_width) << memory_location.permanent_size << "}";
     return os;
 }
 

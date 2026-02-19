@@ -26,7 +26,7 @@ void testSequence() {
     auto weights2_split = functions::linear::weightSubBio<3, 3>(weights2);
 
     auto seq2 = Sequence( // For Linebreak
-            Linear<float, 4>(weights1, bias), 
+            Linear<float, 4>(weights1, bias ), 
             Linear<float, 3>(weights2_split, bias),
             Linear<float, 4>(weights1, bias), 
             Linear<float, 3>(weights2_split, bias),

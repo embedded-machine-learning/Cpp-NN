@@ -1,6 +1,44 @@
-Checks: 'readability-identifier-naming'
+# .clang-tidy
+Checks: >
+  clang-analyzer-*,
+  bugprone-*,
+  performance-*,
+  readability-*,
+  modernize-*,
+  cppcoreguidelines-*,
+  cert-*,
+  hicpp-*,
+  llvm-*,
+  # Keep your explicit naming rule enabled:
+  readability-identifier-naming,
+  # Extras that help for pointer math / templates:
+  misc-const-correctness,
+  misc-unused-parameters,
+  misc-non-private-member-variables-in-classes,
+  portability-simd-intrinsics
+
+# Turn off noisy/low-value checks for this codebase (keeps signal high)
+# – you do intentional pointer arithmetic and C-style arrays for buffers.
+# – you use recursion / templates intentionally.
+# – you rely on compile-time shapes, so magic-number warnings are often noise.
+ChecksExclude: >
+  cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  cppcoreguidelines-avoid-magic-numbers,
+  cppcoreguidelines-no-malloc,
+  cppcoreguidelines-owning-memory,
+  cppcoreguidelines-avoid-c-arrays,
+  modernize-avoid-c-arrays,
+  hicpp-no-array-decay,
+  readability-magic-numbers,
+  readability-function-cognitive-complexity
+
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*'
+AnalyzeTemporaryDtors: true
+FormatStyle: file
 
 CheckOptions:
+  # === Your naming rules (kept) ===
   - { key: readability-identifier-naming.NamespaceCase,         value: lower_case }
   - { key: readability-identifier-naming.ClassCase,             value: CamelCase }
   - { key: readability-identifier-naming.StructCase,            value: CamelCase }
@@ -10,3 +48,19 @@ CheckOptions:
   - { key: readability-identifier-naming.PrivateMemberCase,     value: lower_case }
   - { key: readability-identifier-naming.TemplateParameterCase, value: CamelCase }
   - { key: readability-identifier-naming.MacroDefinitionCase,   value: UPPER_CASE }
+
+  # === Tighten specific bugprone checks ===
+  - { key: bugprone-sizeof-expression.WarnOnSizeOfConstant, value: true }
+  - { key: bugprone-implicit-widening-of-multiplication-result.StrictMode, value: true }
+  - { key: bugprone-suspicious-memory-comparison.WarnOnLiteral0, value: true }
+
+  # === Performance checks that matter for your kernels ===
+  - { key: performance-inefficient-vector-operation.StrictMode, value: true }
+  - { key: performance-unnecessary-value-param.AllowedTypes, value: 'Matrix;MatrixType;PermutedMatrix;SlicedMatrix' }
+  - { key: performance-type-promotion-in-math-fn.ConstantsCanBeConverted, value: true }
+
+  # === Modernize (use where it helps without fighting your style) ===
+  - { key: modernize-use-nodiscard.ReplacementString, value: '[[nodiscard]]' }
+
+  # === LLVM style bits ===
+  - { key: llvm-include-order.Strict, value: true }

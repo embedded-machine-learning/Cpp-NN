@@ -43,6 +43,11 @@ constexpr auto toString<float> = [](const float &value) {
 };
 
 template <>
+constexpr auto toString<int8_t> = [](const int8_t &value) {
+    return std::to_string(static_cast<int>(value));
+};
+
+template <>
 constexpr auto toString<Complex<float>> = [](const Complex<float> &value) {
     std::ostringstream oss;
     oss << "Complex<float>(" << toString<float>(value.real()) << ", " << toString<float>(value.imag()) << ")";
