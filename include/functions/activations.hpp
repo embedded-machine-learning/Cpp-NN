@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <type_traits>
 
+#include "../types/Benchmark.hpp"
 #include "../types/Complex.hpp"
 
 template <typename T>
@@ -18,6 +19,10 @@ constexpr auto Tanh = [](const T &x) { return std::tanh(x); };
 // constexpr auto FastTanh = [](const T val){
 //     static_assert(true, "FastTanh is only defined for float, use FastTanh<float> instead");
 // };
+template <typename T>
+constexpr auto ReLU = [](const T val) {
+    return (val < static_cast<T>(0)) ? (static_cast<T>(0)) : val; // Leaky ReLU with a slope of 0.01 for negative values
+};
 
 template <typename T>
 constexpr auto LeakyReLU = [](const T val) {
@@ -83,8 +88,7 @@ template <typename T = float>
     requires(std::is_convertible_v<float, T>)
 constexpr auto InvertSQRT = [](const T val) -> T { return static_cast<T>(1 / sqrtf(val)); };
 
-template <typename T = float>
-    requires(std::is_convertible_v<float, T>)
+template <typename T>
 constexpr auto Norm = [](const Complex<T> val) -> T { return static_cast<T>(sqrtf(val.real() * val.real() + val.imag() * val.imag())); };
 
 template <std::size_t it = 1, typename T = float>

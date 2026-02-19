@@ -7,6 +7,8 @@
 #include <type_traits>
 #include <utility>
 
+#warning "TODO: Add partial unrolling options to loop/loopUnrolled functions, to make sub unrolling possible, aka unrolly by a factor of N for dimension P as a std::array template parameter" "
+
 template <typename Func, IsMatrixType ReturnMatrixType, IsIndexType... Indices, IsPermutationalSame<ReturnMatrixType>... MatrixTypes, std::size_t... IndicesSeq>
     requires(sizeof...(Indices) < std::remove_cvref_t<ReturnMatrixType>::number_of_dimensions)
 __attribute__((always_inline)) inline constexpr void loopHelper(

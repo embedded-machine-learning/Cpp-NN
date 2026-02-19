@@ -42,6 +42,12 @@ std::basic_ostream<Ch, Tr> &print_tuple_impl(std::basic_ostream<Ch, Tr> &os, con
     return os;
 }
 
+template <typename Type>
+std::ostream &operator<<(std::ostream &os, const helpers::Benchmark::TypeInstance<Type> &obj) {
+    os << obj.get();
+    return os;
+}
+
 template <class Ch, class Tr, typename TupleType>
     requires requires(TupleType t) {
         { std::tuple_size<TupleType>::value } -> std::convertible_to<std::size_t>;
@@ -178,11 +184,13 @@ void printBenchmark() {
     std::cout << "counted_comparisons     : " << helpers::Benchmark::TypeInstance<Type>::counted_comparisons << std::endl;
     std::cout << "counted_extractions     : " << helpers::Benchmark::TypeInstance<Type>::counted_extractions << std::endl;
     std::cout << "counted_abs             : " << helpers::Benchmark::TypeInstance<Type>::counted_abs << std::endl;
+    std::cout << "counted_sqrt            : " << helpers::Benchmark::TypeInstance<Type>::counted_sqrt << std::endl;
     std::cout << "--------------------------" << std::endl;
     std::cout << "Total counted operations: "
               << helpers::Benchmark::TypeInstance<Type>::counted_multiplications + helpers::Benchmark::TypeInstance<Type>::counted_additions +
                          helpers::Benchmark::TypeInstance<Type>::counted_divisions + helpers::Benchmark::TypeInstance<Type>::counted_subtractions +
-                         helpers::Benchmark::TypeInstance<Type>::counted_comparisons + helpers::Benchmark::TypeInstance<Type>::counted_extractions + helpers::Benchmark::TypeInstance<Type>::counted_abs
+                         helpers::Benchmark::TypeInstance<Type>::counted_comparisons + helpers::Benchmark::TypeInstance<Type>::counted_extractions + helpers::Benchmark::TypeInstance<Type>::counted_abs +
+                         helpers::Benchmark::TypeInstance<Type>::counted_sqrt
               << std::endl;
     std::cout << "--------------------------" << std::endl;
 }
