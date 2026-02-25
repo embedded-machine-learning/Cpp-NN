@@ -1538,6 +1538,27 @@ constexpr conditional_const<std::is_const_v<std::remove_reference_t<MatrixType>>
     return SelectFusedMatrix<Is, MatrixType&&>(std::forward<MatrixType>(matrix));
 }
 
+
+template <DimensionOrder AddedOrder, std::array<Dim_size_t, AddedOrder.length()> Lengths = makeFilledArray<Dim_size_t, AddedOrder.length()>(1), IsMatrixType BaseMatrixType>
+constexpr decltype(auto) conditionalFullBroadcast(BaseMatrixType &&matrix) {
+    return conditionalFullBroadcast_helper<AddedOrder, Lengths, 0>(std::forward<BaseMatrixType>(matrix));
+}
+
+template <DimensionOrder AddedOrder, std::array<Dim_size_t, AddedOrder.length()> Lengths = makeFilledArray<Dim_size_t, AddedOrder.length()>(1), Dim_size_t index = 0, IsMatrixType BaseMatrixType>
+    requires(index < AddedOrder.length())
+constexpr decltype(auto) conditionalFullBroadcast_helper(BaseMatrixType &&matrix) {
+    return conditionalFullBroadcast_helper<AddedOrder, Lengths, index + 1>(conditionalBroadcast<AddedOrder[index], {Lengths[index]}>(std::forward<BaseMatrixType>(matrix)));
+}
+
+template <DimensionOrder AddedOrder, std::array<Dim_size_t, AddedOrder.length()> Lengths = makeFilledArray<Dim_size_t, AddedOrder.length()>(1), Dim_size_t index = 0, IsMatrixType BaseMatrixType>
+    requires(index >= AddedOrder.length())
+constexpr decltype(auto) conditionalFullBroadcast_helper(BaseMatrixType &&matrix) {
+    return ReferencedMatrix<BaseMatrixType &&>(std::forward<BaseMatrixType>(matrix)); // No expansion needed, return the original matrix wrapped in a ReferencedMatrix
+}
+
+
+
+
 static_assert(IsMatrixType<Matrix<float, DimensionOrder("12"), 1, 2>>, "Example Assert, for sanity, Matrix<float, DimensionOrder(\"12\"), 1,2> is not a valid MatrixType");
 static_assert(IsMatrixType<PermutedMatrix<DimensionOrder("21"), Matrix<float, DimensionOrder("12"), 1, 2>>>,
               "Example Assert, for sanity, PermutedMatrix<DimensionOrder(\"21\"),Matrix<float, DimensionOrder(\"12\"), 1,2 >> is not a valid MatrixType");

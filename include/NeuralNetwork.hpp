@@ -10,4 +10,5 @@
 #include "./layers/Sequence.hpp"
 #include "./layers/DSSM.hpp"
 #include "./layers/SumReduction.hpp"
+#include "./layers/EWMAReduction.hpp"
 

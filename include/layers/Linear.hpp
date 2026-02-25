@@ -91,6 +91,20 @@ class LinearLayer {
         auto       output_collapsed = collapse<CollapsedOrder, "B">(Out);   // Collapse the output to the specified order
         functions::linear::Linear<UsedSuggestedSubBatchSize, MACOperator>(input_collapsed, output_collapsed, weights_, bias_, Act, std::get<I>(activation_parameters_)...);
     }
+
+    template <bool             ContinueAfter             = true,
+              std::size_t      UsedSuggestedSubBatchSize = suggested_sub_batch_size,
+              IsMatrixType     InputMatrixType,
+              IsMatrixType     OutputMatrixType,
+              IsBaseMatrixType BufferMatrixType    = Matrix<char, "E", 0>,
+              IsBaseMatrixType PermanentMatrixType = Matrix<char, "E", 0>>
+    __attribute__((always_inline)) inline void operator()(const InputMatrixType &Input,
+                                                          OutputMatrixType      &Out,
+                                                    BufferMatrixType             &Buffer,
+                                                          PermanentMatrixType          &PermanentBuffer) const noexcept {
+                                                            this->operator()(Input, Out, Buffer, PermanentBuffer, std::make_index_sequence<sizeof...(ActivationMatrixInformation)>());
+                                                          }
+
 };
 
 static_assert(IsValidLayer<LinearLayer<>>, "LinearLayer does not meet the requirements of a valid layer");

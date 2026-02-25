@@ -56,15 +56,20 @@ struct Benchmark {
         constexpr TypeInstance() noexcept = default;
         constexpr TypeInstance(const Type &value) noexcept : value(value) {};
 
-        template <typename OtherType>
-        constexpr TypeInstance(const OtherType &value) noexcept : value(static_cast<Type>(value)) {
-        }
+        // template <typename OtherType>
+        // constexpr TypeInstance(const OtherType &value) noexcept : value(static_cast<Type>(value)) {
+        // }
 
-        constexpr TypeInstance(const TypeInstance &other) noexcept : value(other.value) {
-        }
+        // constexpr TypeInstance(const TypeInstance &other) noexcept : value(other.value) {
+        // }
 
-        constexpr TypeInstance(TypeInstance &&other) noexcept : value(std::move(other.value)) {
-        }
+        // constexpr TypeInstance(TypeInstance &&other) noexcept : value(std::move(other.value)) {
+        // }
+        constexpr TypeInstance(const TypeInstance &other) noexcept = default;
+        constexpr TypeInstance(TypeInstance &&other) noexcept = default;
+        constexpr TypeInstance<Type> &operator=(const TypeInstance &other) noexcept = default;
+
+        
 
         Type get() const {
             return value;
@@ -101,10 +106,10 @@ struct Benchmark {
             return *this;
         }
 
-        constexpr TypeInstance<Type> &operator=(const TypeInstance &other) noexcept {
-            value = other.value;
-            return *this;
-        }
+        // constexpr TypeInstance<Type> &operator=(const TypeInstance &other) noexcept {
+        //     value = other.value;
+        //     return *this;
+        // }
 
         template <typename OtherType>
         constexpr TypeInstance<Type> &operator=(TypeInstance<OtherType> &&other) noexcept {
@@ -253,3 +258,6 @@ __attribute__((always_inline)) inline helpers::Benchmark::TypeInstance<double> s
 // Numeric limit
 template <typename Type>
 class std::numeric_limits<helpers::Benchmark::TypeInstance<Type>> : public std::numeric_limits<Type> {};
+
+static_assert(__is_trivially_copyable(helpers::Benchmark::TypeInstance<float>), "Benchmar of float is not trivially copyable");
+static_assert(__is_trivially_copyable(helpers::Benchmark::TypeInstance<int>), "Benchmar of int is not trivially copyable");
