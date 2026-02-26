@@ -13,7 +13,7 @@ template < // Foreced linebreak
         DimensionOrder SmoothingOrder = "S",
         typename OutputType           = float,
         typename WeightMatrixType     = Matrix<float, "E", 1>,
-        typename SmoothingLambdaType  = decltype([](auto &ret, const auto &input, const auto &weights) { ret += input * weights; }),
+        typename SmoothingLambdaType  = decltype([](auto &ret, const auto &input, const auto &weights) { ret = ret * weights + (static_cast<decltype(weights)>(1) - weights) * input; }),
         typename OutputLambdaType     = decltype([](auto &ret, const auto &state) { ret = state; }),
         IsMatrixType... ActivationMatrixInformation>
 class EWMAReductionLayer {
@@ -49,14 +49,10 @@ class EWMAReductionLayer {
     static constexpr std::size_t memory_buffer = 0;
     // Permanent Memory which is required for some layers, if used in a time series model
     template <IsMatrixType InputMatrix>
-    static constexpr std::size_t memory_permanent = sizeof(MaterializedMatrix<OutputMatrix<InputMatrix>>);
+    static constexpr std::size_t memory_permanent = sizeof(MaterializedMatrix<StateMatrixType<InputMatrix>>);
 
     // Constructor
-    constexpr EWMAReductionLayer(
-            WeightMatrixType    &&Weights,
-            SmoothingLambdaType &&SmoothingLambda = [](auto &ret, const auto &input, const auto &weights) { ret += input * weights; },
-            OutputLambdaType    &&OutputLambda    = [](auto &ret, const auto &state) { ret = state; },
-            ActivationMatrixInformation &&...ActivationParameters) noexcept
+    constexpr EWMAReductionLayer(WeightMatrixType &&Weights, SmoothingLambdaType &&SmoothingLambda, OutputLambdaType &&OutputLambda, ActivationMatrixInformation &&...ActivationParameters) noexcept
             : weights_(std::forward<WeightMatrixType>(Weights)), smoothing_lambda_(std::forward<SmoothingLambdaType>(SmoothingLambda)), output_lambda_(std::forward<OutputLambdaType>(OutputLambda)),
               activation_parameters_(std::forward<ActivationMatrixInformation>(ActivationParameters)...) {};
 
@@ -68,8 +64,10 @@ class EWMAReductionLayer {
                                                           const std::index_sequence<I...> = std::make_index_sequence<sizeof...(ActivationMatrixInformation)>()) const noexcept {
         static_assert(InputMatrixType::order.containsAll(SmoothingOrder), "Input must contain the SmoothingOrder in its order");
         static_assert(OutputMatrixType::order.containsAny(SmoothingOrder), "Output must contain the SmoothingOrder in its order");
+        static_assert(InputMatrixType::order.containsAll(OutputMatrixType::order), "Input must contain all dimensions of Output");
+        static_assert(InputMatrixType::dimensions == PermutedMatrix<InputMatrixType::order, OutputMatrixType>::dimensions , "Dimensions of Input and Output must match after permutation");
 
-        static_assert(sizeof(permanent.data) >= sizeof(OutputMatrixType), "Permanent Memory Size does not match the required size for OutputMatrixType");
+        static_assert(sizeof(permanent.data) >= sizeof(StateMatrixType<InputMatrixType>), "Permanent Memory Size does not match the required size for OutputMatrixType");
 
         auto &state = *reinterpret_cast<StateMatrixType<InputMatrixType> *>(&permanent.data[0]);
 
@@ -78,31 +76,39 @@ class EWMAReductionLayer {
                 conditionalBroadcast<SmoothingOrder, {1}>(conditionalReplace<"E", SmoothingOrder>(weights_)));
         const auto weights_broadcasted_full = conditionalFullBroadcast<InputMatrixType::order, InputMatrixType::dimensions>(weights_broadcasted);
 
-        loopUnrolled(smoothing_lambda_, state_expanded, Input, weights_broadcasted_full);
-        if constexpr (ContinueAfter) {
-            loopUnrolled(output_lambda_, Out, state, std::get<I>(activation_parameters_)...);
+        constexpr Dim_size_t input_smooting_dimension_size = InputMatrixType::dimensions[InputMatrixType::order.indexOf(SmoothingOrder.order[0])];
+
+        for (Dim_size_t i = 0; i < input_smooting_dimension_size; ++i) {
+            auto input_sliced = slice<SmoothingOrder, 1>(Input, {i});
+            auto state_sliced = slice<SmoothingOrder, 1>(state_expanded, {i});
+            auto out_sliced   = slice<SmoothingOrder, 1>(Out, {i});
+            auto weights_sliced = slice<SmoothingOrder, 1>(weights_broadcasted_full, {i});
+
+            loopUnrolled(smoothing_lambda_, state_sliced, input_sliced, weights_sliced);
+
+            if constexpr (ContinueAfter) {
+                loopUnrolled(output_lambda_, out_sliced, state_sliced, std::get<I>(activation_parameters_)...);
+            }
         }
     }
 };
 
 static_assert(IsValidLayer<EWMAReductionLayer<>>, "BaseLayer does not meet the requirements of a valid layer");
 
-
 template < // Foreced linebreak
         DimensionOrder SmoothingOrder = "S",
         typename OutputType           = float,
         typename WeightMatrixType     = Matrix<float, "E", 1>,
-        typename SmoothingLambdaType  = decltype([](auto &ret, const auto &input, const auto &weights) { ret += input * weights; }),
+        typename SmoothingLambdaType  = decltype([](auto &ret, const auto &input, const auto &weights) { ret = ret * weights + (static_cast<decltype(weights)>(1) - weights) * input; }),
         typename OutputLambdaType     = decltype([](auto &ret, const auto &state) { ret = state; }),
         IsMatrixType... ActivationMatrixInformation>
-__attribute__((always_inline)) inline constexpr auto  EWMAReduction(
-        WeightMatrixType    &&Weights,
-        SmoothingLambdaType &&SmoothingLambda = {},
-        OutputLambdaType    &&OutputLambda    = {},
-        ActivationMatrixInformation &&...ActivationParameters) noexcept {
+__attribute__((always_inline)) inline constexpr auto EWMAReduction(WeightMatrixType    &&Weights,
+                                                                   SmoothingLambdaType &&SmoothingLambda = {},
+                                                                   OutputLambdaType    &&OutputLambda    = {},
+                                                                   ActivationMatrixInformation &&...ActivationParameters) noexcept {
     return EWMAReductionLayer<SmoothingOrder, OutputType, WeightMatrixType, SmoothingLambdaType, OutputLambdaType, ActivationMatrixInformation...>(
-            std::forward<WeightMatrixType>(Weights), std::forward<SmoothingLambdaType>(SmoothingLambda), std::forward<OutputLambdaType>(OutputLambda), std::forward<ActivationMatrixInformation>(ActivationParameters)...);
+            std::forward<WeightMatrixType>(Weights), std::forward<SmoothingLambdaType>(SmoothingLambda), std::forward<OutputLambdaType>(OutputLambda),
+            std::forward<ActivationMatrixInformation>(ActivationParameters)...);
 }
-
 
 } // namespace layers

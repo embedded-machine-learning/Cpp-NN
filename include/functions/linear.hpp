@@ -14,8 +14,6 @@
 #define __LINEAR_FORCE_INLINE__ false
 #endif
 
-#warning "TODO: check the reference implenetation for questianble std::move"
-
 namespace functions::linear {
 /*
 Reference implementation of a Linear Layer.
@@ -110,7 +108,7 @@ inline // Let the compiler decide the inlining
     // Questionalble move here, TODO: review
     [[maybe_unused]]
     const auto broadcast_permute =
-            [=](const auto &matrix) { return std::move(permute<"BC">(conditionalBroadcast<"B", {batch_size}>(conditionalReplace<"E", "C">(conditionalReplicate<"E", {output_channels}>(matrix))))); };
+            [=](const auto &matrix) { return permute<"BC">(conditionalBroadcast<"B", {batch_size}>(conditionalReplace<"E", "C">(conditionalReplicate<"E", {output_channels}>(matrix)))); };
 
     // get data types
     // using AccumulationType = typename BiasMatrixType::value_type;
