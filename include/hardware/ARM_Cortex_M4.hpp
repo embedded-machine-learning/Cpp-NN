@@ -366,11 +366,11 @@ struct OverrideOperation<float, float, float, decltype(multily_accumulate<float,
                 }
 #pragma GCC unroll(65534)
                 for (Dim_size_t input_pos = 0; input_pos < input_channels; input_pos += 1) {
-                    const float local_input = input_permuted.at(batch_pos, input_pos);
-                    float       local_weights[primary_output_channels_rest];
+                    const float local_input[1] = {input_permuted.at(batch_pos, input_pos)};
+                    float       local_weights[primary_output_channels_rest][1];
 #pragma GCC unroll(65534)
                     for (Dim_size_t i = 0; i < primary_output_channels_rest; i++) {
-                        local_weights[i] = weights_permuted.at(batch_pos, primary_output_channels + i, input_pos);
+                        local_weights[i][0] = weights_permuted.at(batch_pos, primary_output_channels + i, input_pos);
                     }
                     vectorMultiplyAccumulate<primary_output_channels_rest, 1, float, float, float>(local_accumulation, local_input, local_weights);
                 }

@@ -6,6 +6,7 @@
 #include "../Matrix.hpp"
 #include "../MatrixOperations.hpp"
 #include "../types/Complex.hpp"
+#include "../types/Benchmark.hpp"
 #include "./constexpressions.hpp"
 
 #define HumanReadableTypeArrayDEF(Typename)                                                                                                                                                            \
@@ -30,6 +31,8 @@ template <std::size_t Align, typename... Types>
 constexpr auto human_readable_type<AlignedMatrixCollection<Align,Types...>> = concat(toArrayAuto("AlignedMatrixCollection<"),num_to_string<Align>,toArrayAuto(", "), concat(human_readable_type<Types>, toArrayAuto(", "))..., toArrayAuto("\b\b>"));
 template <typename Type>
 constexpr auto human_readable_type<Complex<Type>> = concat(toArrayAuto("Complex<"), human_readable_type<Type>, toArrayAuto(">"));
+template <typename Type>
+constexpr auto human_readable_type<helpers::Benchmark::TypeInstance<Type>> = concat(toArrayAuto("helpers::Benchmark::TypeInstance<"), human_readable_type<Type>, toArrayAuto(">"));
 
 template <>
 constexpr auto human_readable_type<DimensionOrder> = toArrayAuto("DimensionOrder");

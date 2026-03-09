@@ -125,12 +125,11 @@ class DSSMLayer {
 
     template <bool             ContinueAfter       = true,
               IsMatrixType     InputMatrixType     = Matrix<float, "BCS", 1, input_channels>,
-              IsMatrixType     OutputMatrixType    = OverrideDimensionMatrix<InputMatrixType, "C", output_channels>,
+              IsMatrixType     OutputMatrixType    = OutputMatrix<InputMatrixType>,
               IsBaseMatrixType BufferMatrixType    = Matrix<char, "E", 0>,
               IsBaseMatrixType PermanentMatrixType = Matrix<char, "E", 0>,
               std::size_t... I>
     __attribute__((always_inline))
-    // __attribute__((noinline))
     inline void
     operator()(const InputMatrixType &Input,
                OutputMatrixType      &Out,
