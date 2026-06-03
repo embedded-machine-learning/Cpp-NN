@@ -5,6 +5,7 @@
 #include "../include/MatrixOperations.hpp"
 #include "../include/helpers/extended_matrix_ops.hpp"
 #include "../include/helpers/print.hpp"
+#include "../include/helpers/human_readable_types.hpp"
 #include "../include/functions/linear.hpp"
 #include "../include/layers/BaseLayer.hpp"
 #include "../include/layers/Linear.hpp"
@@ -19,6 +20,7 @@
 
 // template <>
 // constexpr auto cmp<int> = [](bool &ret, const int &a, const int &b) { ret = a == b; };
+
 
 void testDefaultBeh() {
     std::cout << "************************************************************************" << std::endl;
@@ -132,10 +134,13 @@ void testDefaultBeh() {
 
     std::cout << "************************************************************************" << std::endl;
 
-    auto optimized_weight_matrix = functions::linear::weightSubBio<1, 8 * 3>(weight_matrix);
+    const auto optimized_weight_matrix = functions::linear::weightSubBio<1, 8 * 3>(weight_matrix);
 
-    auto inversed_optimized_weight_matrix = functions::linear::inverseWeightSubBio(optimized_weight_matrix);
+    const auto inversed_optimized_weight_matrix = functions::linear::inverseWeightSubBio(optimized_weight_matrix);
 
+    std::cout << std::is_const_v<std::remove_reference_t<decltype(optimized_weight_matrix)>> << std::endl;
+    std::cout << std::is_const_v<std::remove_reference_t<decltype(inversed_optimized_weight_matrix)>> << std::endl;
+  
     std::cout << "Optimized Weight Matrix: " << optimized_weight_matrix << std::endl;
     std::cout << "Base Weight Matrix: " << weight_matrix << std::endl;
     std::cout << "{";
@@ -149,6 +154,7 @@ void testDefaultBeh() {
     std::cout << "}" << std::endl;
 
     Matrix<bool, DimensionOrder("IO"), weight_matrix.dimensions[0], weight_matrix.dimensions[1]> comparison_matrix_3;
+
     loop([](bool &a, const Type &b, const Type &c) { a = b == c; },             // comparison
          comparison_matrix_3, weight_matrix, inversed_optimized_weight_matrix); // results, inputs
 
@@ -169,8 +175,8 @@ void testLayer() {
     constexpr Dim_size_t batch_size   = 70;
 
     constexpr Dim_size_t output_split = 8 * 5;    
-    constexpr Dim_size_t input_split  = 1;        // AVX2 requires input split to be 1 not anything otherwise suboptimal
-    constexpr Dim_size_t batch_split  = 2;
+    constexpr Dim_size_t input_split  = 3;        // AVX2 requires input split to be 1 not anything otherwise suboptimal
+    constexpr Dim_size_t batch_split  = 3;
 
 
     Matrix<Type, "BC", batch_size, inputs>  input_matrix;

@@ -154,6 +154,17 @@ struct AlignedMatrixCollection<Align, CurrentMatrix, OtherMatrixes...> {
             static_assert(I < sizeof...(OtherMatrixes) + 1, "Out of bounds access in AlignedMatrixCollection");
         }
     }
+
+    template <std::size_t I>
+    constexpr auto &get() {
+        if constexpr (I == 0) {
+            return data;
+        } else if constexpr (I < sizeof...(OtherMatrixes) + 1) {
+            return other_matrixes.template get<I - 1>();
+        } else {
+            static_assert(I < sizeof...(OtherMatrixes) + 1, "Out of bounds access in AlignedMatrixCollection");
+        }
+    }
 };
 
 template <Dim_size_t Align, IsMatrixType CurrentMatrix>
@@ -171,6 +182,14 @@ struct AlignedMatrixCollection<Align, CurrentMatrix> {
 
     template <std::size_t I>
     constexpr auto &get() const {
+        if constexpr (I == 0) {
+            return data;
+        } else {
+            static_assert(I == 0, "Out of bounds access in AlignedMatrixCollection");
+        }
+    }
+    template <std::size_t I>
+    constexpr auto &get() {
         if constexpr (I == 0) {
             return data;
         } else {
@@ -206,6 +225,17 @@ struct AlignedMatrixCollection<Align, CurrentMatrix, OtherMatrixes...> {
             static_assert(I < sizeof...(OtherMatrixes) + 1, "Out of bounds access in AlignedMatrixCollection");
         }
     }
+
+    template <std::size_t I>
+    constexpr auto &get() {
+        if constexpr (I == 0) {
+            return data;
+        } else if constexpr (I < sizeof...(OtherMatrixes) + 1) {
+            return other_matrixes.template get<I - 1>();
+        } else {
+            static_assert(I < sizeof...(OtherMatrixes) + 1, "Out of bounds access in AlignedMatrixCollection");
+        }
+    }
 };
 
 template <Dim_size_t Align, IsMatrixType CurrentMatrix>
@@ -222,6 +252,14 @@ struct AlignedMatrixCollection<Align, CurrentMatrix> {
 
     template <std::size_t I>
     constexpr auto &get() const {
+        if constexpr (I == 0) {
+            return data;
+        } else {
+            static_assert(I == 0, "Out of bounds access in AlignedMatrixCollection");
+        }
+    }
+    template <std::size_t I>
+    constexpr auto &get() {
         if constexpr (I == 0) {
             return data;
         } else {

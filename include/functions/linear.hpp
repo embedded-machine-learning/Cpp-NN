@@ -252,24 +252,43 @@ template <typename WeightMatrixSplitType>
 using InverseWeightSubBioMatrixType = typename WeightSubDivideInverseHelper<WeightMatrixSplitType>::WeightMatrixTypeRecombined;
 
 template <typename Matrices>
-__attribute__((always_inline)) constexpr inline auto inverseWeightSubBio(const Matrices &weights) {
+__attribute__((always_inline)) constexpr inline auto inverseWeightSubBio(Matrices &weights) {
     static_assert(std::tuple_size<std::remove_cvref_t<Matrices>>::value == 4, "weights must be a tuple of 4 matrices");
-    auto & Matrix_A = std::get<0>(weights);
-    auto & Matrix_B = std::get<1>(weights);
-    auto & Matrix_C = std::get<2>(weights);
-    auto & Matrix_D = std::get<3>(weights);
+    if constexpr (std::is_const_v<Matrices>) {
+        const auto &Matrix_A = std::get<0>(weights);
+        const auto &Matrix_B = std::get<1>(weights);
+        const auto &Matrix_C = std::get<2>(weights);
+        const auto &Matrix_D = std::get<3>(weights);
 
-    auto Matrix_A_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(Matrix_A)));
-    auto Matrix_B_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(Matrix_B)));
-    auto Matrix_C_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(Matrix_C)));
-    auto Matrix_D_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(Matrix_D)));
+        const auto Matrix_A_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(std::move(Matrix_A))));
+        const auto Matrix_B_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(std::move(Matrix_B))));
+        const auto Matrix_C_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(std::move(Matrix_C))));
+        const auto Matrix_D_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(std::move(Matrix_D))));
 
-    auto Matrix_AB = concatenate<0>(std::move(Matrix_A_collapsed), std::move(Matrix_B_collapsed));
-    auto Matrix_CD = concatenate<0>(std::move(Matrix_C_collapsed), std::move(Matrix_D_collapsed));
+        const auto Matrix_AB = concatenate<0>(std::move(Matrix_A_collapsed), std::move(Matrix_B_collapsed));
+        const auto Matrix_CD = concatenate<0>(std::move(Matrix_C_collapsed), std::move(Matrix_D_collapsed));
 
-    auto Matrix_A_B_C_D = concatenate<1>(std::move(Matrix_AB), std::move(Matrix_CD));
+        const auto Matrix_A_B_C_D = concatenate<1>(std::move(Matrix_AB), std::move(Matrix_CD));
 
-    return Matrix_A_B_C_D;
+        return Matrix_A_B_C_D;
+    } else {
+        auto &Matrix_A = std::get<0>(weights);
+        auto &Matrix_B = std::get<1>(weights);
+        auto &Matrix_C = std::get<2>(weights);
+        auto &Matrix_D = std::get<3>(weights);
+
+        auto Matrix_A_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(std::move(Matrix_A))));
+        auto Matrix_B_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(std::move(Matrix_B))));
+        auto Matrix_C_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(std::move(Matrix_C))));
+        auto Matrix_D_collapsed = permute<"IO">(collapse<"Oo", "O">(collapse<"Ii", "I">(std::move(Matrix_D))));
+
+        auto Matrix_AB = concatenate<0>(std::move(Matrix_A_collapsed), std::move(Matrix_B_collapsed));
+        auto Matrix_CD = concatenate<0>(std::move(Matrix_C_collapsed), std::move(Matrix_D_collapsed));
+
+        auto Matrix_A_B_C_D = concatenate<1>(std::move(Matrix_AB), std::move(Matrix_CD));
+
+        return Matrix_A_B_C_D;
+    }
 }
 
 template <typename MatrixType>
@@ -285,32 +304,30 @@ __attribute__((always_inline)) constexpr inline auto pack(const Matrices &...wei
     constexpr Dim_size_t alignment = FirstPack::align;
     // there are still 4 matrixes per pack, they should split and all packs are fused, then repacked to aligned collection
 
-    return makeAlignedMatrixCollectionNoSafeGuard<alignment>(      // forced linebreak
-            (fuse(materialize(std::get<0>(weights))...)), // forced linebreak
-            (fuse(materialize(std::get<1>(weights))...)), // forced linebreak
-            (fuse(materialize(std::get<2>(weights))...)), // forced linebreak
+    return makeAlignedMatrixCollectionNoSafeGuard<alignment>( // forced linebreak
+            (fuse(materialize(std::get<0>(weights))...)),     // forced linebreak
+            (fuse(materialize(std::get<1>(weights))...)),     // forced linebreak
+            (fuse(materialize(std::get<2>(weights))...)),     // forced linebreak
             (fuse(materialize(std::get<3>(weights))...)));
 }
 
 template <typename... Matrices>
     requires((IsMatrixType<Matrices> && ...))
-__attribute__((always_inline)) constexpr inline auto pack(const Matrices &... weights) {
-    return materialize(fuse(weights...));   // If the matrices are not tuples, just fuse them as is
+__attribute__((always_inline)) constexpr inline auto pack(const Matrices &...weights) {
+    return materialize(fuse(weights...)); // If the matrices are not tuples, just fuse them as is
 }
 
 template <Dim_size_t SuggestedSubInputChannels, Dim_size_t SuggestedSubOutputChannels, IsMatrixType... WeightMatrixType>
-    requires((std::remove_cvref_t<WeightMatrixType>::order.remove("IO").length() == 0)&& ...)
-__attribute__((always_inline)) constexpr inline auto weightSubBioEarlyFusion(const WeightMatrixType &... weights) {
-    return weightSubBio<SuggestedSubInputChannels,SuggestedSubOutputChannels>(fuse(weights...));
+    requires((std::remove_cvref_t<WeightMatrixType>::order.remove("IO").length() == 0) && ...)
+__attribute__((always_inline)) constexpr inline auto weightSubBioEarlyFusion(const WeightMatrixType &...weights) {
+    return weightSubBio<SuggestedSubInputChannels, SuggestedSubOutputChannels>(fuse(weights...));
 }
 
 template <Dim_size_t SuggestedSubInputChannels, Dim_size_t SuggestedSubOutputChannels, IsMatrixType... WeightMatrixType>
-    requires((std::remove_cvref_t<WeightMatrixType>::order.remove("IO").length() == 0)&& ...)
-__attribute__((always_inline)) constexpr inline auto weightSubBioLateFusion(const WeightMatrixType &... weights) {
-    return pack(weightSubBio<SuggestedSubInputChannels,SuggestedSubOutputChannels>(weights)...);
+    requires((std::remove_cvref_t<WeightMatrixType>::order.remove("IO").length() == 0) && ...)
+__attribute__((always_inline)) constexpr inline auto weightSubBioLateFusion(const WeightMatrixType &...weights) {
+    return pack(weightSubBio<SuggestedSubInputChannels, SuggestedSubOutputChannels>(weights)...);
 }
-
-
 
 template <std::size_t SuggestedSubBatchSize                         = 1,
           template <typename, typename, typename> class MACOperator = DefaultMACOperation,
