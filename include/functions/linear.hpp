@@ -428,20 +428,28 @@ inline // Let the compiler decide the inlining
 // Unrolled Sub Batch
 #pragma GCC unroll(1)
     for (Dim_size_t batch = 0; batch < batch_size - sub_batch_size_rest; batch += sub_batch_size) {
+        constexpr Dim_size_t output_channel_loop_upper_bound = (output_channels - sub_output_channels_rest)/sub_output_channels;
 #pragma GCC unroll(1)
-        for (Dim_size_t output_channel = 0; output_channel < output_channels - sub_output_channels_rest; output_channel += sub_output_channels) {
+        for (Dim_size_t output_channel_index = 0; output_channel_index < output_channel_loop_upper_bound; output_channel_index ++) {
+        // for (Dim_size_t output_channel = 0; output_channel < output_channels - sub_output_channels_rest; output_channel += sub_output_channels) {
+            const Dim_size_t output_channel= output_channel_index*sub_output_channels;
             // slice to subbatch
             // slice output channels
             const auto input_sliced_batch   = replace<"BC", "bc">(slice<"B", sub_batch_size>(input_broadcasted, {batch}));
-            const auto weights_sliced_batch = replace<"B", "b">(collapse<"Oo", "o">(slice<"BO", sub_batch_size, 1>(weights_a_broadcasted, {batch, output_channel / sub_output_channels})));
+            const auto weights_sliced_batch = replace<"B", "b">(collapse<"Oo", "o">(slice<"BO", sub_batch_size, 1>(weights_a_broadcasted, {batch, output_channel_index})));
             const auto bias_sliced          = replace<"BC", "bo">(slice<"BC", sub_batch_size, sub_output_channels>(bias_broadcasted, {batch, output_channel}));
             auto       out_sliced           = replace<"BC", "bo">(slice<"BC", sub_batch_size, sub_output_channels>(out_broadcasted, {batch, output_channel}));
 
             auto sum_matrix = materializeUnrolled(permute<"bo">(bias_sliced), MACOperator_::pre_processing);
+
+            constexpr Dim_size_t input_channel_loop_upper_bound = (input_channels - sub_input_channels_rest)/sub_input_channels;
 #pragma GCC unroll(1)
-            for (Dim_size_t input_channel = 0; input_channel < input_channels - sub_input_channels_rest; input_channel += sub_input_channels) {
+            for (Dim_size_t input_channel_index = 0; input_channel_index < input_channel_loop_upper_bound; input_channel_index++) {
+            // for (Dim_size_t input_channel = 0; input_channel < input_channels - sub_input_channels_rest; input_channel += sub_input_channels) {
+                const Dim_size_t input_channel= input_channel_index*sub_input_channels;
+
                 const auto input_sliced_channel   = replace<"c", "i">(slice<"c", sub_input_channels>(input_sliced_batch, {input_channel}));
-                const auto weights_sliced_channel = collapse<"Ii", "i">(slice<"I", 1>(weights_sliced_batch, {input_channel / sub_input_channels}));
+                const auto weights_sliced_channel = collapse<"Ii", "i">(slice<"I", 1>(weights_sliced_batch, {input_channel_index}));
 
                 // // Perform Tensor MAC
                 MACOperator_::op(sum_matrix, input_sliced_channel, weights_sliced_channel);
@@ -449,7 +457,7 @@ inline // Let the compiler decide the inlining
             if constexpr (sub_input_channels_rest > 0) {
                 // take care of matrix b
                 const auto weights_b_sliced_batch =
-                        replace<"B", "b">(collapse<"Ii", "i">(collapse<"Oo", "o">(slice<"BO", sub_batch_size, 1>(weights_b_broadcasted, {batch, output_channel / sub_output_channels}))));
+                        replace<"B", "b">(collapse<"Ii", "i">(collapse<"Oo", "o">(slice<"BO", sub_batch_size, 1>(weights_b_broadcasted, {batch, output_channel_index}))));
                 const auto input_sliced_channel_rest = replace<"c", "i">(slice<"c", sub_input_channels_rest>(input_sliced_batch, {input_channels - sub_input_channels_rest}));
 
                 // // Perform Tensor MAC

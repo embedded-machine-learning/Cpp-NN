@@ -24,7 +24,7 @@ TargetMatrixType convertToBaseMatrix(pybind11::array_t<typename TargetMatrixType
     auto *data_ptr = static_cast<typename TargetMatrixType::value_type *>(info.ptr);
     std::copy(data_ptr, data_ptr + info.size, result.data.begin());
 
-    return std::move(result);
+    return result;
 }
 
 template <IsBaseMatrixType TargetMatrixType, typename NumpyType=typename TargetMatrixType::value_type>

@@ -24,6 +24,7 @@ struct Benchmark {
     static inline CounterType counted_extractions{};
     static inline CounterType counted_abs{};
     static inline CounterType counted_sqrt{};
+    static inline CounterType counted_exp{};
 
 
     static void resetAll() {
@@ -35,6 +36,7 @@ struct Benchmark {
         counted_extractions     = 0;
         counted_abs             = 0;
         counted_sqrt            = 0;
+        counted_exp            = 0;
     }
 
     template <typename Type>
@@ -51,6 +53,7 @@ struct Benchmark {
         static inline CounterType counted_extractions{};
         static inline CounterType counted_abs{};
         static inline CounterType counted_sqrt{};
+        static inline CounterType counted_exp{};
 
         using type                        = Type;
         constexpr TypeInstance() noexcept = default;
@@ -84,6 +87,7 @@ struct Benchmark {
             counted_extractions     = 0;
             counted_abs             = 0;
             counted_sqrt            = 0;
+            counted_exp = 0;
         }
 
         // Static cast operators
@@ -254,6 +258,21 @@ __attribute__((always_inline)) inline helpers::Benchmark::TypeInstance<double> s
     helpers::Benchmark::TypeInstance<double>::counted_sqrt++;
     return ret;
 }
+
+__attribute__((always_inline)) inline helpers::Benchmark::TypeInstance<double> exp(const helpers::Benchmark::TypeInstance<double> &value) {
+    helpers::Benchmark::TypeInstance<double> ret(exp(value.get()));
+    helpers::Benchmark::counted_exp++;
+    helpers::Benchmark::TypeInstance<double>::counted_exp++;
+    return ret;
+}
+
+__attribute__((always_inline)) inline helpers::Benchmark::TypeInstance<float> exp(const helpers::Benchmark::TypeInstance<float> &value) {
+    helpers::Benchmark::TypeInstance<float> ret(exp(value.get()));
+    helpers::Benchmark::counted_exp++;
+    helpers::Benchmark::TypeInstance<float>::counted_exp++;
+    return ret;
+}
+
 
 // Numeric limit
 template <typename Type>

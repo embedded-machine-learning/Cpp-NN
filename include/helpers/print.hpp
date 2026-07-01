@@ -186,12 +186,13 @@ void printBenchmark() {
     std::cout << "counted_extractions     : " << helpers::Benchmark::TypeInstance<Type>::counted_extractions << std::endl;
     std::cout << "counted_abs             : " << helpers::Benchmark::TypeInstance<Type>::counted_abs << std::endl;
     std::cout << "counted_sqrt            : " << helpers::Benchmark::TypeInstance<Type>::counted_sqrt << std::endl;
+    std::cout << "counted_exp             : " << helpers::Benchmark::TypeInstance<Type>::counted_exp << std::endl;
     std::cout << "--------------------------" << std::endl;
     std::cout << "Total counted operations: "
               << helpers::Benchmark::TypeInstance<Type>::counted_multiplications + helpers::Benchmark::TypeInstance<Type>::counted_additions +
                          helpers::Benchmark::TypeInstance<Type>::counted_divisions + helpers::Benchmark::TypeInstance<Type>::counted_subtractions +
                          helpers::Benchmark::TypeInstance<Type>::counted_comparisons + helpers::Benchmark::TypeInstance<Type>::counted_extractions + helpers::Benchmark::TypeInstance<Type>::counted_abs +
-                         helpers::Benchmark::TypeInstance<Type>::counted_sqrt
+                         helpers::Benchmark::TypeInstance<Type>::counted_sqrt+ helpers::Benchmark::TypeInstance<Type>::counted_exp
               << std::endl;
     std::cout << "--------------------------" << std::endl;
 }
