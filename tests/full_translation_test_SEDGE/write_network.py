@@ -65,40 +65,51 @@ def write_network_weights(weights_dict, step_scale, file, Cpp_NN_include_path):
             input_scale = weights_dict[index]['scale']
         if 'offset' in weights_dict[index].keys():
             input_offset = weights_dict[index]['offset']
+        if 'running_norm_alpha' in weights_dict[index].keys():
+            running_norm_alpha = weights_dict[index]['running_norm_alpha']
+            write_weight(running_norm_alpha, f"running_norm_alpha{index}", 'C', file)
 
 
 
 def write_network(weights_dict, file, Cpp_NN_include_path, B_KP=(12*4), C_KP=(12*8), S_KP=(14*8), W_KP=(14*8)):
     sys.path.append(Cpp_NN_include_path)
     from write_weights import write_weight
-    
+
     file.write('// const auto __attribute__(( section(".data") )) network=layers::Sequence(\n')
     file.write('const auto network=layers::Sequence(\n')
     string = ""
     for index,_ in enumerate(weights_dict):
         act = weights_dict[index]['Activation'] if 'Activation' in weights_dict[index].keys() else 'PassThrough'
         CX_mac = 'DefaultMACOperation' if act == 'Norm' else 'RealResultMACOperation'
+
+        A_variable = f"A{index}"
+        B_variable = f"B{index}_1_{B_KP}" if B_KP is not None else f"B{index}"
+        B_bias_variable = f"B{index}_bias"
+        C_variable = f"C{index}_1_{C_KP}" if C_KP is not None else f"C{index}"
+        C_bias_variable = f"C{index}_bias"
+        SkipLayer_variable = f"SkipLayer{index}_1_{S_KP}" if S_KP is not None else f"SkipLayer{index}"
+
+        Alpha_variable = f"running_norm_alpha{index}"
+
         if f'A' in weights_dict[index].keys() and f'SkipLayer' in weights_dict[index].keys() and weights_dict[index]['SkipLayer'] is not None:
             print('Layer eval: ', np.all(weights_dict[index]['B'].real==1),np.all(weights_dict[index]['B'].imag==0),np.all(weights_dict[index]['B_bias']==0))
             print('Activation:', act, 'Using CX_mac:', CX_mac)
             if np.all(weights_dict[index]['B'].real==1) and np.all(weights_dict[index]['B'].imag==0) and np.all(weights_dict[index]['B_bias']==0):
                 print("First layer opt found")
-                string += f'    layers::SedgeFirstLayerOp<float,Complex<float>,1,1,NonMACOperation,{CX_mac}>(A{index}, C{index}_1_{C_KP}, C{index}_bias, SkipLayer{index}_1_{S_KP}, {act}<float>),\n'
+                string += f'    layers::SedgeFirstLayerOp<float,Complex<float>,1,1,NonMACOperation,{CX_mac}>({A_variable},{C_variable}, {C_bias_variable}, {SkipLayer_variable}, {act}<float>),\n'
             else:
-                string += f'    layers::Sedge<float,Complex<float>,1,1,DefaultMACOperation,{CX_mac}>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, SkipLayer{index}_1_{S_KP}, {act}<float>),\n'
-            # string += f'    layers::Sedge<float,Complex<float>,1,1,DefaultMACOperation,{CX_mac}>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, SkipLayer{index}_1_{S_KP}, {act}<float>),\n'
-            # string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, SkipLayer{index}, {act}<float>),\n'   # Default slow version
+                string += f'    layers::Sedge<float,Complex<float>,1,1,DefaultMACOperation,{CX_mac}>({A_variable}, {B_variable}, {B_bias_variable}, {C_variable}, {C_bias_variable},{SkipLayer_variable}, {act}<float>),\n'
 
         elif f'A' in weights_dict[index].keys():
-            string += f'    layers::Sedge<float,Complex<float>,1,1,DefaultMACOperation,{CX_mac}>(A{index}, B{index}_1_{B_KP}, B{index}_bias, C{index}_1_{C_KP}, C{index}_bias, Matrix<float, "E", 1>{{0}}, {act}<float>),\n'
-            # string += f'    layers::Sedge<float,Complex<float>>(A{index}, B{index}, B{index}_bias, C{index}, C{index}_bias, Matrix<float, "E", 1>{{0}}, {act}<float>),\n' # Default slow version
+            string += f'    layers::Sedge<float,Complex<float>,1,1,DefaultMACOperation,{CX_mac}>({A_variable}, {B_variable}, {B_bias_variable}, {C_variable}, {C_bias_variable}, Matrix<float, "E", 1>{{0}}, {act}<float>),\n'
     
+        elif f'running_norm_alpha' in weights_dict[index].keys():
+            string += f'    layers::Norm<float,1,1>({Alpha_variable}),\n'
     
     string += f'    layers::SumReduction<"S">(),\n'
 
-
     for index,_ in enumerate(weights_dict):
+        W_variable = f"W_1_{W_KP}" if W_KP is not None else f"W"
         if f'W' in weights_dict[index].keys():
-            string += f'    layers::Linear<float>(W_1_{W_KP}, b, PassThrough<float>),\n'
-            # string += f'    layers::Linear<float>(W, b, PassThrough<float>),\n' # Default slow version    
+            string += f'    layers::Linear<float>({W_variable}, b, PassThrough<float>),\n'
     file.write(string[:-2] + '\n);\n\n')
