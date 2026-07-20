@@ -29,3 +29,8 @@ constexpr auto matrixCmp(MatrixTypeA &&a, MatrixTypeB &&b) {
     loop(cmp<typename std::remove_cvref_t<MatrixTypeA>::value_type>, result, std::forward<MatrixTypeA>(a), std::forward<MatrixTypeB>(b));
     return result;
 }
+
+template <IsMatrixType MatrixTypeA>
+constexpr void matrixSet(MatrixTypeA &a, typename MatrixTypeA::value_type &&b) {
+    loop([b](auto& a){a=b;}, std::forward<MatrixTypeA>(a));
+}

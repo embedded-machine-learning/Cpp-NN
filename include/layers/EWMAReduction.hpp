@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <cstdlib>
 #include <stddef.h>
 #include <type_traits>
 
@@ -14,7 +15,7 @@ template < // Foreced linebreak
         typename OutputType           = float,
         typename WeightMatrixType     = Matrix<float, "E", 1>,
         typename SmoothingLambdaType  = decltype([](auto &ret, const auto &input, const auto &weights) { ret = ret * weights + (static_cast<decltype(weights)>(1) - weights) * input; }),
-        typename OutputLambdaType     = decltype([](auto &ret, const auto &state) { ret = state; }),
+        typename OutputLambdaType     = decltype([](auto &ret, const auto &state, [[maybe_unused]] const auto &input) { ret = state; }),
         IsMatrixType... ActivationMatrixInformation>
 class EWMAReductionLayer {
   private:
@@ -65,7 +66,7 @@ class EWMAReductionLayer {
         static_assert(InputMatrixType::order.containsAll(SmoothingOrder), "Input must contain the SmoothingOrder in its order");
         static_assert(OutputMatrixType::order.containsAny(SmoothingOrder), "Output must contain the SmoothingOrder in its order");
         static_assert(InputMatrixType::order.containsAll(OutputMatrixType::order), "Input must contain all dimensions of Output");
-        static_assert(InputMatrixType::dimensions == PermutedMatrix<InputMatrixType::order, OutputMatrixType>::dimensions , "Dimensions of Input and Output must match after permutation");
+        static_assert(InputMatrixType::dimensions == PermutedMatrix<InputMatrixType::order, OutputMatrixType>::dimensions, "Dimensions of Input and Output must match after permutation");
 
         static_assert(sizeof(permanent.data) >= sizeof(StateMatrixType<InputMatrixType>), "Permanent Memory Size does not match the required size for OutputMatrixType");
 
@@ -79,15 +80,15 @@ class EWMAReductionLayer {
         constexpr Dim_size_t input_smooting_dimension_size = InputMatrixType::dimensions[InputMatrixType::order.indexOf(SmoothingOrder.order[0])];
 
         for (Dim_size_t i = 0; i < input_smooting_dimension_size; ++i) {
-            auto input_sliced = slice<SmoothingOrder, 1>(Input, {i});
-            auto state_sliced = slice<SmoothingOrder, 1>(state_expanded, {i});
-            auto out_sliced   = slice<SmoothingOrder, 1>(Out, {i});
+            auto input_sliced   = slice<SmoothingOrder, 1>(Input, {i});
+            auto state_sliced   = slice<SmoothingOrder, 1>(state_expanded, {i});
+            auto out_sliced     = slice<SmoothingOrder, 1>(Out, {i});
             auto weights_sliced = slice<SmoothingOrder, 1>(weights_broadcasted_full, {i});
 
             loopUnrolled(smoothing_lambda_, state_sliced, input_sliced, weights_sliced);
 
             if constexpr (ContinueAfter) {
-                loopUnrolled(output_lambda_, out_sliced, state_sliced, std::get<I>(activation_parameters_)...);
+                loopUnrolled(output_lambda_, out_sliced, state_sliced, input_sliced, std::get<I>(activation_parameters_)...);
             }
         }
     }
@@ -100,12 +101,30 @@ template < // Foreced linebreak
         typename OutputType           = float,
         typename WeightMatrixType     = Matrix<float, "E", 1>,
         typename SmoothingLambdaType  = decltype([](auto &ret, const auto &input, const auto &weights) { ret = ret * weights + (static_cast<decltype(weights)>(1) - weights) * input; }),
-        typename OutputLambdaType     = decltype([](auto &ret, const auto &state) { ret = state; }),
+        typename OutputLambdaType     = decltype([](auto &ret, const auto &state, [[maybe_unused]] const auto &input) { ret = state; }),
         IsMatrixType... ActivationMatrixInformation>
-__attribute__((always_inline)) inline constexpr auto EWMAReduction(WeightMatrixType    &&Weights,
-                                                                   SmoothingLambdaType &&SmoothingLambda = {},
-                                                                   OutputLambdaType    &&OutputLambda    = {},
-                                                                   ActivationMatrixInformation &&...ActivationParameters) noexcept {
+__attribute__((always_inline)) inline constexpr auto EWMAReduction(
+        WeightMatrixType    &&Weights,
+        SmoothingLambdaType &&SmoothingLambda = [](auto &ret, const auto &input, const auto &weights) { ret = ret * weights + (static_cast<decltype(weights)>(1) - weights) * input; },
+        OutputLambdaType    &&OutputLambda    = [](auto &ret, const auto &state, [[maybe_unused]] const auto &input) { ret = state; },
+        ActivationMatrixInformation &&...ActivationParameters) noexcept {
+    return EWMAReductionLayer<SmoothingOrder, OutputType, WeightMatrixType, SmoothingLambdaType, OutputLambdaType, ActivationMatrixInformation...>(
+            std::forward<WeightMatrixType>(Weights), std::forward<SmoothingLambdaType>(SmoothingLambda), std::forward<OutputLambdaType>(OutputLambda),
+            std::forward<ActivationMatrixInformation>(ActivationParameters)...);
+}
+
+template < // Foreced linebreak
+        DimensionOrder SmoothingOrder = "S",
+        typename OutputType           = float,
+        typename WeightMatrixType     = Matrix<float, "E", 1>,
+        typename SmoothingLambdaType  = decltype([](auto &ret, const auto &input, const auto &weights) { ret = ret * weights + (static_cast<decltype(weights)>(1) - weights) * std::abs(input); }),
+        typename OutputLambdaType     = decltype([](auto &ret, const auto &state, [[maybe_unused]] const auto &input) { ret = input / (state + 1e-6); }),
+        IsMatrixType... ActivationMatrixInformation>
+__attribute__((always_inline)) inline constexpr auto EWMARunningNorm(
+        WeightMatrixType    &&Weights,
+        SmoothingLambdaType &&SmoothingLambda = [](auto &ret, const auto &input, const auto &weights) { ret = ret * weights + (static_cast<decltype(weights)>(1) - weights) * std::abs(input); },
+        OutputLambdaType    &&OutputLambda    = [](auto &ret, const auto &state, [[maybe_unused]] const auto &input) { ret = input / (state + 1e-6); },
+        ActivationMatrixInformation &&...ActivationParameters) noexcept {
     return EWMAReductionLayer<SmoothingOrder, OutputType, WeightMatrixType, SmoothingLambdaType, OutputLambdaType, ActivationMatrixInformation...>(
             std::forward<WeightMatrixType>(Weights), std::forward<SmoothingLambdaType>(SmoothingLambda), std::forward<OutputLambdaType>(OutputLambda),
             std::forward<ActivationMatrixInformation>(ActivationParameters)...);
