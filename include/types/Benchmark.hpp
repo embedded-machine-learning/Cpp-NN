@@ -2,6 +2,7 @@
 
 #include <limits>
 #include <utility>
+#include <cstdlib>
 
 #define ENABLE_PRINT true
 
@@ -271,6 +272,18 @@ __attribute__((always_inline)) inline helpers::Benchmark::TypeInstance<float> ex
     helpers::Benchmark::counted_exp++;
     helpers::Benchmark::TypeInstance<float>::counted_exp++;
     return ret;
+}
+
+
+namespace std {
+helpers::Benchmark::TypeInstance<float> abs(const helpers::Benchmark::TypeInstance<float> value) {
+    return ::fabsf(value);
+}
+}
+
+template <>
+const helpers::Benchmark::TypeInstance<float>& std::max<helpers::Benchmark::TypeInstance<float>>(const helpers::Benchmark::TypeInstance<float> &a, const helpers::Benchmark::TypeInstance<float> &b) {
+    return a > b ? a : b;
 }
 
 

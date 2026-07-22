@@ -7,7 +7,7 @@
 #include "./MatrixOperations.hpp"
 
 template <IsBaseMatrixType TargetMatrixType>
-TargetMatrixType convertToBaseMatrix(pybind11::array_t<typename TargetMatrixType::value_type> array) {
+TargetMatrixType convertToBaseMatrix(pybind11::array_t<typename TargetMatrixType::value_type, pybind11::array::c_style | pybind11::array::forcecast> array) {
     pybind11::buffer_info info = array.request();
     if (info.ndim != TargetMatrixType::number_of_dimensions) {
         throw std::runtime_error("Array dimensions do not match the target matrix dimensions");
@@ -28,7 +28,7 @@ TargetMatrixType convertToBaseMatrix(pybind11::array_t<typename TargetMatrixType
 }
 
 template <IsBaseMatrixType TargetMatrixType, typename NumpyType=typename TargetMatrixType::value_type>
-void convertToBaseMatrix(pybind11::array_t<NumpyType> array, TargetMatrixType &result) {
+void convertToBaseMatrix(pybind11::array_t<NumpyType, pybind11::array::c_style | pybind11::array::forcecast> array, TargetMatrixType &result) {
     pybind11::buffer_info info = array.request();
     if (info.ndim != TargetMatrixType::number_of_dimensions) {
         throw std::runtime_error("Array dimensions do not match the target matrix dimensions");
@@ -48,8 +48,9 @@ void convertToBaseMatrix(pybind11::array_t<NumpyType> array, TargetMatrixType &r
 template <IsMatrixType MatrixType, typename NumpyType=typename MatrixType::value_type>
 pybind11::array_t<NumpyType> convertToNumpyArray(const MatrixType &matrix) {
     using MaterializedMatrixType = MaterializedMatrix<MatrixType>;
+    std::vector<size_t> shape(matrix.dimensions.begin(), matrix.dimensions.end());
 
-    pybind11::array_t<NumpyType> array(matrix.dimensions);
+    pybind11::array_t<NumpyType, pybind11::array::c_style> array(shape);
     pybind11::buffer_info                              info = array.request();
 
     MaterializedMatrixType *data_ptr = reinterpret_cast<MaterializedMatrixType *>(info.ptr);

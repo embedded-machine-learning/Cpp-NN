@@ -11,4 +11,6 @@
 #include "./layers/DSSM.hpp"
 #include "./layers/SumReduction.hpp"
 #include "./layers/EWMAReduction.hpp"
+#include "./layers/EWMAGlobalNorm.hpp"
+
 

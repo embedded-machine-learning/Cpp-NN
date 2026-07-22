@@ -16,6 +16,7 @@ struct MemoryLocation {
     std::size_t Output_size;
     std::size_t buffer_index;
     std::size_t buffer_size;
+    std::size_t buffer_minimum;
     std::size_t permanent_index; // carefull peramemt memory is in a different buffer than the dynamic memory
     std::size_t permanent_size;
 };
@@ -65,6 +66,7 @@ struct MemoryPlaning<Input, std::tuple<Layers...>, std::index_sequence<Current, 
                                                                                                                          : sizeof(Output_),
                                                                       .buffer_size     = (memory_inlined) ? (signed)(MemorySize) - (signed)std::max(sizeof(Input_), sizeof(Output_))
                                                                                                           : std::max((signed)(MemorySize) - (signed)sizeof(Input_) - (signed)sizeof(Output_), 0),
+                                                                      .buffer_minimum  = memory_buffer,
                                                                       .permanent_index = PermanentOffset,
                                                                       .permanent_size  = memory_permanent};
 
@@ -109,7 +111,7 @@ struct Sequence {
     using OutputMatrix = std::tuple_element_t<1, std::tuple_element_t<sizeof...(Layers) - 1, typename CurrentMemoryPlaning<InputMatrix>::LocalMatrixTypesTuple>>;
 
     // Constructor
-    constexpr Sequence(Layers &&...layers) : layers(std::forward<Layers>(layers)...) {};
+    constexpr Sequence(const Layers &...layers) : layers(layers...) {};
 
     template <IsMatrixType InputMatrixType, IsBaseMatrixType BufferMatrixType = Matrix<char, "E", 0>>
     __attribute__((always_inline)) inline InputMatrixType *getInputMatrix(BufferMatrixType &buffer) const noexcept {

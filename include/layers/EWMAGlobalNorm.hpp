@@ -14,12 +14,12 @@
 namespace layers {
 
 template < // Foreced linebreak
+        typename OutputType               = float,
         DimensionOrder SmoothingOrder     = "S",
         DimensionOrder ReductionOrder     = "C",
-        typename OutputType               = float,
-        typename WeightMatrixType         = Matrix<float, "E", 1>,
-        typename InputReductionResetType  = decltype([](auto &ret) { ret = 0; }),
-        typename InputReductionLambdaType = decltype([](auto &ret, const auto &input) { ret = std::max(ret, input); }),
+        typename WeightMatrixType         = Matrix<OutputType, "E", 1>,
+        typename InputReductionResetType  = decltype([](auto &ret) { ret = static_cast<decltype(ret)>(0); }),
+        typename InputReductionLambdaType = decltype([](auto &ret, const auto &input) { ret = std::max(ret,  std::abs(input)); }),
         typename SmoothingLambdaType      = decltype([](auto &ret, const auto &input, const auto &weights) { ret = ret * weights + (static_cast<decltype(weights)>(1) - weights) * input; }),
         typename OutputLambdaType         = decltype([](auto &ret, const auto &state, const auto &input) { ret = input / (state + 1e-6); }),
         IsMatrixType... ActivationMatrixInformation>
@@ -50,18 +50,20 @@ class EWMAGlobalNormLayer {
     template <IsMatrixType InputMatrix>
     using ReducedInputType = MaterializedMatrix<OverrideDimensionMatrix<OverrideRemoveDimensionMatrix<MaterializedMatrix<InputMatrix>, SmoothingOrder>, ReductionOrder, 1>>;
 
-    // Memory Requirements of forward pass
-    template <IsMatrixType InputMatrix>
-    static constexpr std::size_t memory_minimal = sizeof(MaterializedMatrix<InputMatrix>) + sizeof(MaterializedMatrix<ReducedInputType<InputMatrix>>);
     // Can it reuse the input Memory region?
     static constexpr bool memory_inlined = true;
     // Required Buffer size
     // the amount of Memory required for temporary storage
     template <IsMatrixType InputMatrix>
-    static constexpr std::size_t memory_buffer = 0;
+    static constexpr std::size_t memory_buffer = sizeof(ReducedInputType<InputMatrix>);
     // Permanent Memory which is required for some layers, if used in a time series model
     template <IsMatrixType InputMatrix>
     static constexpr std::size_t memory_permanent = sizeof(MaterializedMatrix<StateMatrixType<InputMatrix>>);
+    // Memory Requirements of forward pass
+    template <IsMatrixType InputMatrix>
+    static constexpr std::size_t memory_minimal = sizeof(MaterializedMatrix<InputMatrix>) + memory_buffer<InputMatrix>;
+    
+
 
     // Constructor
     constexpr EWMAGlobalNormLayer( // Forced Linebreak
@@ -101,9 +103,9 @@ class EWMAGlobalNormLayer {
 
         constexpr Dim_size_t input_smooting_dimension_size = InputMatrixType::dimensions[InputMatrixType::order.indexOf(SmoothingOrder.order[0])];
 
-        std::cout << "InputReduced Type: " << human_readable_type<decltype(InputReduced)> << std::endl;
-        std::cout << "InputReduced_expanded Type: " << human_readable_type<decltype(InputReduced_expanded)> << std::endl;
-        std::cout << "InputReduced_expanded Type: " << human_readable_type<MaterializedMatrix<decltype(InputReduced_expanded)>> << std::endl;
+        // std::cout << "InputReduced Type: " << human_readable_type<decltype(InputReduced)> << std::endl;
+        // std::cout << "InputReduced_expanded Type: " << human_readable_type<decltype(InputReduced_expanded)> << std::endl;
+        // std::cout << "InputReduced_expanded Type: " << human_readable_type<MaterializedMatrix<decltype(InputReduced_expanded)>> << std::endl;
 
         for (Dim_size_t i = 0; i < input_smooting_dimension_size; ++i) {
             auto input_sliced            = slice<SmoothingOrder, 1>(Input, {i});
@@ -124,10 +126,10 @@ class EWMAGlobalNormLayer {
             //     std::cout << "input_reduced_sliced_replicated Type: " << human_readable_type<MaterializedMatrix<decltype(input_reduced_sliced_replicated)>> << std::endl;
         //     std::cout << "weights_sliced Type: " << human_readable_type<MaterializedMatrix<decltype(weights_sliced)>> << std::endl;
         //     std::cout << "=====================================================================" << std::endl;
-
+            
             loopUnrolled(input_reset_lambda_, input_reduced_sliced);
             loopUnrolled(input_reduction_lambda_, input_reduced_sliced_replicated, input_sliced);
-
+            
             loopUnrolled(smoothing_lambda_, state_sliced, input_reduced_sliced, weights_sliced);
 
         //     std::cout << "=====================================================================" << std::endl;
@@ -154,28 +156,29 @@ class EWMAGlobalNormLayer {
 static_assert(IsValidLayer<EWMAGlobalNormLayer<>>, "BaseLayer does not meet the requirements of a valid layer");
 
 template < // Foreced linebreak
+        typename OutputType               = float,
         DimensionOrder SmoothingOrder     = "S",
         DimensionOrder ReductionOrder     = "C",
-        typename OutputType               = float,
-        typename WeightMatrixType         = Matrix<float, "E", 1>,
-        typename InputReductionLambdaType = decltype([](auto &ret, const auto &input) { ret = std::max(ret, input); }),
-        typename InputReductionResetType  = decltype([](auto &ret) { ret = 0; }),
-        typename SmoothingLambdaType      = decltype([](auto &ret, const auto &input, const auto &weights) { ret = ret * weights + (static_cast<decltype(weights)>(1) - weights) * input; }),
-        typename OutputLambdaType         = decltype([](auto       &ret,
-                                                const auto &state,
+        typename WeightMatrixType         = Matrix<OutputType, "E", 1>,
+        typename InputReductionResetType  = decltype([](OutputType &ret) {ret = static_cast<OutputType>(0); }),
+        typename InputReductionLambdaType = decltype([](OutputType &ret, const OutputType &input) { ret = std::max(ret, std::abs(input));}),
+        typename SmoothingLambdaType      = decltype([](OutputType &ret, const OutputType &input, const OutputType &weights) { ret = ret * weights + (static_cast<OutputType>(1) - weights) * input; }),
+        typename OutputLambdaType         = decltype([](OutputType       &ret,
+                                                const OutputType &state,
                                                 [[maybe_unused]]
-                                                const auto &input) { ret = input / (state + 1e-6); }),
+                                                const OutputType &input) { ret = input / (state +  static_cast<OutputType>(1e-6)); }),
         IsMatrixType... ActivationMatrixInformation>
 __attribute__((always_inline)) inline constexpr auto EWMAGlobalNorm(
         WeightMatrixType         &&Weights,
-        InputReductionResetType  &&InputReductionReset  ,
-        InputReductionLambdaType &&InputReductionLambda ,
-        SmoothingLambdaType      &&SmoothingLambda,
-        OutputLambdaType         &&OutputLambda,
+        InputReductionResetType  &&InputReductionReset ={},
+        InputReductionLambdaType &&InputReductionLambda ={},
+        SmoothingLambdaType      &&SmoothingLambda={},
+        OutputLambdaType         &&OutputLambda={},
         ActivationMatrixInformation &&...ActivationParameters) noexcept {
     return EWMAGlobalNormLayer<                                                                       // Forced Linebreak
+            OutputType, 
             SmoothingOrder, ReductionOrder,                                                           // Orders
-            OutputType, WeightMatrixType,                                                             // datatypes
+            WeightMatrixType,                                                             // datatypes
             InputReductionResetType, InputReductionLambdaType, SmoothingLambdaType, OutputLambdaType, // Lambdas
             ActivationMatrixInformation...>(std::forward<WeightMatrixType>(Weights), std::forward<InputReductionResetType>(InputReductionReset),
                                             std::forward<InputReductionLambdaType>(InputReductionLambda), std::forward<SmoothingLambdaType>(SmoothingLambda),
