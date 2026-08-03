@@ -165,3 +165,5 @@ Please use the following when citing our work:
 }
 ```
 
+## Contributors
+Special thanks to [@FatemehEiji](https://github.com/FatemehEiji) for adding transformer layers and logic to the library.
