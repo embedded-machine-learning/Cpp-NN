@@ -61,7 +61,7 @@ struct MemoryPlaning<Input, std::tuple<Layers...>, std::index_sequence<Current, 
                                                                       .Input_size      = sizeof(Input_),
                                                                       .Output_index    = ((Current + Offset + memory_inline_offset) % 2 == 0) ? MemorySize - sizeof(Output_) : 0,
                                                                       .Output_size     = sizeof(Output_),
-                                                                      .buffer_index    = (memory_inlined)                ? std::max(sizeof(Input_), sizeof(Output_))
+                                                                      .buffer_index    = (memory_inlined)                ? (((Current + Offset) % 2 == 0)? std::max(sizeof(Input_), sizeof(Output_)) : 0)
                                                                                          : ((Current + Offset) % 2 == 0) ? sizeof(Input_)
                                                                                                                          : sizeof(Output_),
                                                                       .buffer_size     = (memory_inlined) ? (signed)(MemorySize) - (signed)std::max(sizeof(Input_), sizeof(Output_))
