@@ -37,11 +37,13 @@ __attribute__((always_inline)) inline constexpr void loop(Func &&, ReturnMatrixT
     // static_assert(same_dimensions,"Ensure that all Matrixes have the same dimensions sizes for the same named dimensions");
 
     static_assert((ReturnMatrixTypeNoRef::order.containsAll(std::remove_cvref_t<MatrixTypes>::order) && ...), "Ensure that all orders have the same NAMED DIMENSIONS");
+    static_assert((IsPermutationalSame<ReturnMatrixType, MatrixTypes>&&...), "Matrices are not of equal size");
 }
 
 template <typename Func, IsMatrixType ReturnMatrixType, IsMatrixType... MatrixTypes>
     requires((IsPermutationalSame<MatrixTypes, ReturnMatrixType> && ...)) // Ensure that all matrices are permutationally same
 __attribute__((always_inline)) inline constexpr void loop(Func &&func, ReturnMatrixType &&returnMatrix, MatrixTypes &&...matrices) {
+    // ((std::cout << "Is Permutational Same: " << IsPermutationalSame<ReturnMatrixType, MatrixTypes> << std::endl),...);
     loopHelper(std::forward<Func>(func), std::tuple<>(), std::make_index_sequence<0>(), std::forward<ReturnMatrixType &&>(returnMatrix), std::forward<const MatrixTypes>(matrices)...);
 }
 
@@ -74,6 +76,7 @@ __attribute__((always_inline)) inline constexpr void loopUnrolled(Func &&, Retur
     // static_assert(same_dimensions,"Ensure that all Matrixes have the same dimensions sizes for the same named dimensions");
 
     static_assert((ReturnMatrixTypeNoRef::order.containsAll(std::remove_cvref_t<MatrixTypes>::order) && ...), "Ensure that all orders have the same NAMED DIMENSIONS");
+    static_assert((IsPermutationalSame<ReturnMatrixType, MatrixTypes>&&...), "Matrices are not of equal size");
 }
 
 template <typename Func, IsMatrixType ReturnMatrixType, IsMatrixType... MatrixTypes>

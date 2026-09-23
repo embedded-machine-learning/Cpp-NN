@@ -48,7 +48,7 @@ using OWeightMatrixType = decltype(LARFormer)::OWeightMatrixType_;
 
 InputMatrixType inputMatrix;
 OutputMatrixType output;
-auto forward(pybind11::array_t<Type> input) {
+auto forward(pybind11::array_t<Type, pybind11::array::c_style> input) {
     randomize(buffer); // If this changes things we got a problem with uninitialized memory
 
     helpers::Benchmark::TypeInstance<Type>::resetAll(); // Reset the benchmark counters
@@ -65,25 +65,25 @@ auto forward(pybind11::array_t<Type> input) {
 }
 
 IWeightMatrixType IWeightMatrix;
-void set_IWeight(pybind11::array_t<Type> weight){
+void set_IWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, IWeightMatrix);
     matrixAssign(LARFormer.IWeightMatrix, IWeightMatrix);
 }
 
 KWeightMatrixType KWeightMatrix;
-void set_KWeight(pybind11::array_t<Type> weight){
+void set_KWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, KWeightMatrix);
     matrixAssign(LARFormer.KWeightMatrix, KWeightMatrix);
 }
 
 VWeightMatrixType VWeightMatrix;
-void set_VWeight(pybind11::array_t<Type> weight){
+void set_VWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, VWeightMatrix);
     matrixAssign(LARFormer.VWeightMatrix, VWeightMatrix);
 }
 
 OWeightMatrixType OWeightMatrix;
-void set_OWeight(pybind11::array_t<Type> weight){
+void set_OWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, OWeightMatrix);
     matrixAssign(LARFormer.OWeightMatrix, OWeightMatrix);
 }

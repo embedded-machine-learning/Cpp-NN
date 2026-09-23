@@ -1,13 +1,13 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
-#include "../Matrix.hpp"
-#include "../functions/linear.hpp"
-#include "../pybind_interface.hpp"
+#include "../include/Matrix.hpp"
+#include "../include/functions/linear.hpp"
+#include "../include/pybind_interface.hpp"
 
-#include "../helpers/print.hpp"
+#include "../include/helpers/print.hpp"
 
-auto print(pybind11::array_t<float> input) {
+auto print(pybind11::array_t<float, pybind11::array::c_style> input) {
     auto matrix = convertToBaseMatrix<Matrix<float, "BC", 10, 20>>(input);
 
     print2DMatrix(matrix);
@@ -15,7 +15,7 @@ auto print(pybind11::array_t<float> input) {
     return convertToNumpyArray(matrix);
 }
 
-auto matrixMult(pybind11::array_t<float> input, pybind11::array_t<float> weights, pybind11::array_t<float> bias) {
+auto matrixMult(pybind11::array_t<float, pybind11::array::c_style> input, pybind11::array_t<float, pybind11::array::c_style> weights, pybind11::array_t<float, pybind11::array::c_style> bias) {
     auto inputMatrix  = convertToBaseMatrix<Matrix<float, "BC", 10, 20>>(input);
     auto weightMatrix = convertToBaseMatrix<Matrix<float, "IO", 20, 30>>(weights);
     auto biasMatrix   = convertToBaseMatrix<Matrix<float, "C", 30>>(bias);
@@ -27,7 +27,7 @@ auto matrixMult(pybind11::array_t<float> input, pybind11::array_t<float> weights
     return convertToNumpyArray(output);
 }
 
-auto matrixMultSplit(pybind11::array_t<float> input, pybind11::array_t<float> weights, pybind11::array_t<float> bias) {
+auto matrixMultSplit(pybind11::array_t<float, pybind11::array::c_style> input, pybind11::array_t<float, pybind11::array::c_style> weights, pybind11::array_t<float, pybind11::array::c_style> bias) {
     auto inputMatrix  = convertToBaseMatrix<Matrix<float, "BC", 10, 20>>(input);
     auto weightMatrix = convertToBaseMatrix<Matrix<float, "IO", 20, 30>>(weights);
     auto biasMatrix   = convertToBaseMatrix<Matrix<float, "C", 30>>(bias);

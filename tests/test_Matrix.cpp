@@ -1,7 +1,9 @@
+#include <cstdlib>
 #include <iostream>
 
 #include "../include/MatrixOperations.hpp"
 #include "../include/helpers/print.hpp"
+#include "../include/helpers/extended_matrix_ops.hpp"
 
 __attribute__((noinline)) void testMatrix() {
     std::cout << "************************************************************************" << std::endl;
@@ -89,6 +91,32 @@ __attribute__((noinline)) void testPermutation() {
     std::cout << "Permuted Matrix at position (3,2,1) after template access: " << permutedMatrix.at(3, 1, 2) << std::endl;
     std::cout << "Base Matrix at position (1,2,3) should be same: " << matrix.at(1, 2, 3) << std::endl;
 
+
+    Matrix<float, "CWH", 2, 3, 4> matrix2;
+    randomize(matrix2);
+    auto matrix2_permuted =  materialize(permute<"HWC">(matrix2));
+    randomize(matrix2_permuted);
+    Matrix<float, "CWH", 2, 3, 5> matrix3;
+    randomize(matrix3);
+
+    std::cout << "Matrix 2 dimensions:          " << matrix2.dimensions << std::endl;
+    std::cout << "Matrix 2 permuted dimensions: " << matrix2_permuted.dimensions << std::endl;
+    std::cout << "Matrix 2 order:               " << matrix2.order << std::endl;
+    std::cout << "Matrix 2 permuted order:      " << matrix2_permuted.order << std::endl;
+    std::cout << "Matrix 2 and permuted are permutationaly same: " << IsPermutationalSame<decltype(matrix2), decltype(matrix2_permuted)> << std::endl;
+
+    std::cout << "Matrix 2 dimensions:          " << matrix2.dimensions << std::endl;
+    std::cout << "Matrix 3 dimensions:          " << matrix3.dimensions << std::endl;
+    std::cout << "Matrix 2 order:               " << matrix2.order << std::endl;
+    std::cout << "Matrix 3 order:               " << matrix3.order << std::endl;
+    std::cout << "Matrix 2 and matrix 3 are permutationaly same: " << IsPermutationalSame<decltype(matrix2), decltype(matrix3)> << std::endl;
+
+    loopUnrolled([](auto &a, const auto b, const auto c) { a = b+c; }, matrix2, matrix2_permuted, matrix2_permuted);  // This should work, as they are permutationally same
+    // loopUnrolled([](auto &a, const auto b) { a = b; }, matrix2, matrix3);  // This should not compile, as they are not permutationally same
+
+    // printNDMatrix(matrix2);
+    // printNDMatrix(matrix2_permuted);
+    // printNDMatrix(matrix3);
 }
 
 Matrix<float, DimensionOrder("CWH"), 4, 3, 2> matrixA;
@@ -645,7 +673,7 @@ int main() {
     std::cout << "Matrix test file is included successfully." << std::endl;
 
     // testMatrix();
-    // testPermutation();
+    testPermutation();
     // testConcatenation();
     // testSclices();
     // testExpand();
@@ -657,6 +685,6 @@ int main() {
     // testReplication();
     // testConst();
     // testZeroSize();
-    testOverrides();
+    // testOverrides();
     return 0;
 }

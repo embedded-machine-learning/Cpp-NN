@@ -48,7 +48,7 @@ using VWeightMatrixType = decltype(BasicAttention)::VWeightMatrixType_;
 
 InputMatrixType inputMatrix;
 OutputMatrixType output;
-auto forward(pybind11::array_t<Type> input) {
+auto forward(pybind11::array_t<Type, pybind11::array::c_style> input) {
     randomize(buffer);  // If this changes things we got a problem with uninitialized memory
     helpers::Benchmark::TypeInstance<Type>::resetAll(); // Reset the benchmark counters
     printBenchmark<Type>();
@@ -64,19 +64,19 @@ auto forward(pybind11::array_t<Type> input) {
 }
 
 QWeightMatrixType QWeightMatrix;
-void set_QWeight(pybind11::array_t<Type> weight){
+void set_QWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, QWeightMatrix);
     matrixAssign(BasicAttention.QWeightMatrix, QWeightMatrix);
 }
 
 KWeightMatrixType KWeightMatrix;
-void set_KWeight(pybind11::array_t<Type> weight){
+void set_KWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, KWeightMatrix);
     matrixAssign(BasicAttention.KWeightMatrix, KWeightMatrix);
 }
 
 VWeightMatrixType VWeightMatrix;
-void set_VWeight(pybind11::array_t<Type> weight){
+void set_VWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, VWeightMatrix);
     matrixAssign(BasicAttention.VWeightMatrix, VWeightMatrix);
 }

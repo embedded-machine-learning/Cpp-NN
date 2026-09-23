@@ -1427,12 +1427,21 @@ struct OverrideRemoveDimensionHelper {
 template <IsMatrixType BaseMatrixType, DimensionOrder RemoveOrder>
 using OverrideRemoveDimensionMatrix = OverrideRemoveDimensionHelper<BaseMatrixType, RemoveOrder>::LocalMaterializedMatrix;
 
+template<std::size_t N>
+consteval bool arraysEqual(const std::array<Dim_size_t, N>& A, const std::array<Dim_size_t, N>& B) {
+    for (std::size_t i = 0; i < N; ++i) {
+        if (A[i] != B[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 template <typename CmpMatrixType, typename BaseMatrixType>
 concept IsPermutationalSame = (IsMatrixType<CmpMatrixType> && IsMatrixType<BaseMatrixType> &&                                               // Both are matrix types
                                std::remove_cvref_t<BaseMatrixType>::order.length() == std::remove_cvref_t<CmpMatrixType>::order.length() && // Same length
-                               std::remove_cvref_t<BaseMatrixType>::order.containsAll(std::remove_cvref_t<CmpMatrixType>::order)            // Same named dimensions
-                               //    PermutedMatrix<std::remove_cvref_t<BaseMatrixType>::order, std::remove_cvref_t<CmpMatrixType>>::dimensions == std::remove_cvref_t<BaseMatrixType>::dimensions //
-                               //    Same dimensions // doesnt work
+                               std::remove_cvref_t<BaseMatrixType>::order.containsAll(std::remove_cvref_t<CmpMatrixType>::order) &&           // Same named dimensions
+                               arraysEqual(PermutedMatrix<std::remove_cvref_t<BaseMatrixType>::order, std::remove_cvref_t<CmpMatrixType>>::dimensions, std::remove_cvref_t<BaseMatrixType>::dimensions) // Same dimensions
 );
 
 template <typename T>

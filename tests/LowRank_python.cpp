@@ -52,7 +52,7 @@ using VTrVWeightMatrixType = decltype(LowRank)::VTrVWeightMatrixType_;
 OutputMatrixType output;
 InputMatrixType inputMatrix;
 
-auto forward(pybind11::array_t<Type> input) {
+auto forward(pybind11::array_t<Type, pybind11::array::c_style> input) {
     randomize(buffer);  // If this changes things we got a problem with uninitialized memory
 
     helpers::Benchmark::TypeInstance<Type>::resetAll(); // Reset the benchmark counters
@@ -68,37 +68,37 @@ auto forward(pybind11::array_t<Type> input) {
 }
 
 QWeightMatrixType QWeightMatrix;
-void set_QWeight(pybind11::array_t<Type> weight){
+void set_QWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, QWeightMatrix);
     matrixAssign(LowRank.QWeightMatrix, QWeightMatrix);
 }
 
 VTrQWeightMatrixType VTrQWeightMatrix;
-void set_VTrQWeight(pybind11::array_t<Type> weight){
+void set_VTrQWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, VTrQWeightMatrix);
     matrixAssign(LowRank.VTrQWeightMatrix, VTrQWeightMatrix);
 }
 
 KWeightMatrixType KWeightMatrix;
-void set_KWeight(pybind11::array_t<Type> weight){
+void set_KWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, KWeightMatrix);
     matrixAssign(LowRank.KWeightMatrix, KWeightMatrix);
 }
 
 VTrKWeightMatrixType VTrKWeightMatrix;
-void set_VTrKWeight(pybind11::array_t<Type> weight){
+void set_VTrKWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, VTrKWeightMatrix);
     matrixAssign(LowRank.VTrKWeightMatrix, VTrKWeightMatrix);
 }
 
 VWeightMatrixType VWeightMatrix;
-void set_VWeight(pybind11::array_t<Type> weight){
+void set_VWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, VWeightMatrix);
     matrixAssign(LowRank.VWeightMatrix, VWeightMatrix);
 }
 
 VTrVWeightMatrixType VTrVWeightMatrix;
-void set_VTrVWeight(pybind11::array_t<Type> weight){
+void set_VTrVWeight(pybind11::array_t<Type, pybind11::array::c_style> weight){
     convertToBaseMatrix(weight, VTrVWeightMatrix);
     matrixAssign(LowRank.VTrVWeightMatrix, VTrVWeightMatrix);
 }
